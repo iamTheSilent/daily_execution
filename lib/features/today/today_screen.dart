@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 import 'package:drift/drift.dart' show Value;
 import '../../core/date/app_date.dart';
+import '../../core/theme/app_colors.dart';
 import '../../data/database/database.dart';
 import '../../data/database/tables.dart';
 import '../../domain/task_logic.dart';
@@ -18,58 +19,127 @@ class TodayScreen extends ConsumerWidget {
     final day = ref.watch(selectedDayProvider);
     final mode = ref.watch(calendarModeProvider);
     final tasksAsync = ref.watch(dayTasksProvider);
+    final isFa = ref.watch(localeProvider).languageCode == 'fa';
+
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final isToday =
+        day.year == today.year && day.month == today.month && day.day == today.day;
+
     return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.add),
-          onPressed: () => _quickAdd(context, ref),
-        ),
-        centerTitle: true,
-        title: Column(children: [
-          Text(AppDate.primaryLong(day, mode),
-              style:
-                  const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-          Text(AppDate.secondaryShort(day, mode),
-              textDirection: TextDirection.ltr,
-              style: const TextStyle(fontSize: 11, color: Colors.grey)),
-        ]),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.swap_vert),
-            onPressed: () => _sortSheet(context, ref),
-          ),
-        ],
-      ),
-      body: GestureDetector(
-        onHorizontalDragEnd: (d) {
-          final v = d.primaryVelocity ?? 0;
-          if (v == 0) return;
-          ref.read(selectedDayProvider.notifier).state =
-              day.add(Duration(days: v < 0 ? 1 : -1));
-        },
-        child: tasksAsync.when(
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (e, _) => Center(child: Text('خطا: $e')),
-          data: (tasks) => tasks.isEmpty
-              ? const Center(child: Text('برای افزودن کار، + را بزن'))
-              : ListView.builder(
-                  padding: const EdgeInsets.all(12),
-                  itemCount: tasks.length,
-                  itemBuilder: (_, i) {
-                    final t = tasks[i];
-                    return TaskRow(
-                      task: t,
-                      onCycleStatus: () =>
-                          ref.read(taskRepositoryProvider).cycleStatus(t),
-                      onOpen: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => TaskDetailScreen(taskId: t.id),
+      body: SafeArea(
+        child: GestureDetector(
+          onHorizontalDragEnd: (d) {
+            final v = d.primaryVelocity ?? 0;
+            if (v == 0) return;
+            ref.read(selectedDayProvider.notifier).state =
+                day.add(Duration(days: v < 0 ? 1 : -1));
+          },
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // ── سربرگ: تیترِ درشت + مرتب‌سازی + دکمهٔ + مشکی ──
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 18, 14, 6),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            AppDate.primaryLong(day, mode),
+                            style: const TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                              height: 1.15,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            AppDate.secondaryShort(day, mode),
+                            textDirection: TextDirection.ltr,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.swap_vert,
+                          color: AppColors.textSecondary),
+                      onPressed: () => _sortSheet(context, ref),
+                    ),
+                    const SizedBox(width: 2),
+                    _AddButton(onTap: () => _quickAdd(context, ref)),
+                  ],
+                ),
+              ),
+              // ── ردیفِ راهنما + میان‌برِ «امروز» ──
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+                child: Row(
+                  children: [
+                    if (!isToday) ...[
+                      _TodayPill(
+                        isFa: isFa,
+                        onTap: () => ref
+                            .read(selectedDayProvider.notifier)
+                            .state = today,
+                      ),
+                      const SizedBox(width: 10),
+                    ],
+                    Expanded(
+                      child: Text(
+                        isFa
+                            ? 'برای جابه‌جایی بینِ روزها، صفحه را بکش'
+                            : 'Swipe sideways to change the day',
+                        style: const TextStyle(
+                          fontSize: 11.5,
+                          color: AppColors.textSecondary,
                         ),
                       ),
-                    );
-                  },
+                    ),
+                  ],
                 ),
+              ),
+              const SizedBox(height: 2),
+              // ── لیستِ کارها ──
+              Expanded(
+                child: tasksAsync.when(
+                  loading: () =>
+                      const Center(child: CircularProgressIndicator()),
+                  error: (e, _) =>
+                      Center(child: Text('${isFa ? 'خطا' : 'Error'}: $e')),
+                  data: (tasks) => tasks.isEmpty
+                      ? _EmptyDay(isFa: isFa)
+                      : ListView.builder(
+                          padding: const EdgeInsets.fromLTRB(16, 2, 16, 24),
+                          itemCount: tasks.length,
+                          itemBuilder: (_, i) {
+                            final t = tasks[i];
+                            return TaskRow(
+                              task: t,
+                              onCycleStatus: () => ref
+                                  .read(taskRepositoryProvider)
+                                  .cycleStatus(t),
+                              onOpen: () => Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) =>
+                                      TaskDetailScreen(taskId: t.id),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -145,4 +215,83 @@ class TodayScreen extends ConsumerWidget {
         TaskSort.statusOrder => 'بر اساس وضعیت',
         TaskSort.manual => 'دستی (کشیدن)',
       };
+}
+
+class _AddButton extends StatelessWidget {
+  const _AddButton({required this.onTap});
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: AppColors.dark,
+      shape: const CircleBorder(),
+      child: InkWell(
+        customBorder: const CircleBorder(),
+        onTap: onTap,
+        child: const SizedBox(
+          width: 44,
+          height: 44,
+          child: Icon(Icons.add, color: Colors.white, size: 26),
+        ),
+      ),
+    );
+  }
+}
+
+class _TodayPill extends StatelessWidget {
+  const _TodayPill({required this.onTap, required this.isFa});
+  final VoidCallback onTap;
+  final bool isFa;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: AppColors.focusTint,
+      borderRadius: BorderRadius.circular(20),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(20),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          child: Row(mainAxisSize: MainAxisSize.min, children: [
+            const Icon(Icons.today, size: 15, color: AppColors.accent),
+            const SizedBox(width: 5),
+            Text(
+              isFa ? 'برو به امروز' : 'Today',
+              style: const TextStyle(
+                fontSize: 12.5,
+                fontWeight: FontWeight.w600,
+                color: AppColors.accent,
+              ),
+            ),
+          ]),
+        ),
+      ),
+    );
+  }
+}
+
+class _EmptyDay extends StatelessWidget {
+  const _EmptyDay({required this.isFa});
+  final bool isFa;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.wb_sunny_outlined,
+              size: 44, color: AppColors.textSecondary),
+          const SizedBox(height: 12),
+          Text(
+            isFa ? 'برای افزودن کار، + را بزن' : 'Tap + to add a task',
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: AppColors.textSecondary),
+          ),
+        ],
+      ),
+    );
+  }
 }

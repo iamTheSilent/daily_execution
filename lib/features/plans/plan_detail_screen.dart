@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:drift/drift.dart' show Value;
 import '../../core/date/app_date.dart';
+import '../../core/date/wheel_picker.dart';
 import '../../core/l10n/app_strings.dart';
+import '../../core/theme/app_colors.dart';
 import '../../data/database/database.dart';
 import '../../data/database/tables.dart';
 import '../../providers/app_providers.dart';
-
-const _accent = Color(0xFFFF9500);
 
 class PlanDetailScreen extends ConsumerWidget {
   const PlanDetailScreen({super.key, required this.plan});
@@ -21,7 +21,6 @@ class PlanDetailScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(title: Text(plan.name)),
       floatingActionButton: FloatingActionButton(
-        backgroundColor: _accent,
         onPressed: () => _addTask(context, ref, s),
         child: const Icon(Icons.add),
       ),
@@ -31,50 +30,49 @@ class PlanDetailScreen extends ConsumerWidget {
         data: (tasks) {
           final done = tasks.where((t) => t.status == TaskStatus.done).length;
           final total = tasks.length;
-          final remaining = total - done;
           final progress = total == 0 ? 0.0 : done / total;
 
           return Column(
             children: [
               Padding(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(children: [
-                      Text('$remaining ${s.remainingLabel}',
+                      Text('${total - done} ${s.remainingLabel}',
                           style: const TextStyle(
-                              color: _accent,
+                              color: AppColors.accent,
                               fontWeight: FontWeight.bold,
                               fontSize: 15)),
-                      const SizedBox(width: 12),
+                      const SizedBox(width: 10),
                       Text('$done/$total ${s.doneLabel}',
                           style: const TextStyle(
-                              color: Colors.grey, fontSize: 14)),
+                              color: AppColors.textSecondary, fontSize: 14)),
                     ]),
                     const SizedBox(height: 10),
                     ClipRRect(
                       borderRadius: BorderRadius.circular(8),
                       child: LinearProgressIndicator(
                         value: progress,
-                        minHeight: 10,
-                        backgroundColor: Colors.grey.withOpacity(0.2),
-                        valueColor: const AlwaysStoppedAnimation(_accent),
+                        minHeight: 8,
+                        backgroundColor: AppColors.progressTrack,
+                        valueColor:
+                            const AlwaysStoppedAnimation(AppColors.accent),
                       ),
                     ),
                   ],
                 ),
               ),
-              const Divider(height: 1),
               Expanded(
                 child: tasks.isEmpty
                     ? Center(
                         child: Text(s.emptyPlanTasks,
                             textAlign: TextAlign.center,
-                            style: const TextStyle(color: Colors.grey)))
+                            style:
+                                const TextStyle(color: AppColors.textSecondary)))
                     : ListView.builder(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 8),
+                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 90),
                         itemCount: tasks.length,
                         itemBuilder: (_, i) => _PlanTaskCard(
                           task: tasks[i],
@@ -112,7 +110,9 @@ class PlanDetailScreen extends ConsumerWidget {
         builder: (sheetCtx, setSheet) => Padding(
           padding: EdgeInsets.only(
             bottom: MediaQuery.of(sheetCtx).viewInsets.bottom,
-            left: 16, right: 16, top: 16,
+            left: 16,
+            right: 16,
+            top: 16,
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -121,10 +121,10 @@ class PlanDetailScreen extends ConsumerWidget {
                 controller: ctrl,
                 autofocus: true,
                 decoration: InputDecoration(
+                    border: InputBorder.none,
                     hintText: isFa ? 'تسکِ جدید…' : 'New task…'),
                 onSubmitted: (_) => Navigator.pop(sheetCtx, true),
               ),
-              const SizedBox(height: 8),
               Row(children: [
                 TextButton.icon(
                   icon: const Icon(Icons.schedule, size: 18),
@@ -133,13 +133,10 @@ class PlanDetailScreen extends ConsumerWidget {
                       : AppDate.secondaryShort(
                           due!, ref.read(calendarModeProvider))),
                   onPressed: () async {
-                    final now = DateTime.now();
-                    final d = await showDatePicker(
-                      context: sheetCtx,
-                      initialDate: due ?? now,
-                      firstDate: DateTime(now.year - 1),
-                      lastDate: DateTime(now.year + 5),
-                    );
+                    final d = await showWheelDateTime(sheetCtx,
+                        initial: due,
+                        mode: ref.read(calendarModeProvider),
+                        isFa: isFa);
                     if (d != null) setSheet(() => due = d);
                   },
                 ),
@@ -149,18 +146,16 @@ class PlanDetailScreen extends ConsumerWidget {
                   onPressed: () => Navigator.pop(sheetCtx, true),
                 ),
               ]),
-              const SizedBox(height: 8),
+              const SizedBox(height: 6),
             ],
           ),
         ),
       ),
     );
     if (ok == true && ctrl.text.trim().isNotEmpty) {
-      await ref.read(planRepositoryProvider).createPlanTask(
-            planId: plan.id,
-            title: ctrl.text.trim(),
-            dueDate: due,
-          );
+      await ref
+          .read(planRepositoryProvider)
+          .createPlanTask(planId: plan.id, title: ctrl.text.trim(), dueDate: due);
     }
   }
 }
@@ -185,57 +180,60 @@ class _PlanTaskCard extends StatelessWidget {
         task.dueDate != null &&
         task.dueDate!.isBefore(DateTime(now.year, now.month, now.day));
 
-    return Card(
-      margin: const EdgeInsets.symmetric(vertical: 6),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(14),
-        side: overdue
-            ? const BorderSide(color: Colors.red, width: 1.2)
-            : BorderSide.none,
-      ),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(14),
-        onTap: onOpen,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
-          child: Row(
-            children: [
-              _StatusCircle(status: task.status, onTap: onToggle),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(task.title,
-                        style: TextStyle(
-                          fontSize: 16,
-                          decoration:
-                              done ? TextDecoration.lineThrough : null,
-                          color: done ? Colors.grey : null,
-                        )),
-                    if (task.note != null && task.note!.isNotEmpty) ...[
-                      const SizedBox(height: 2),
-                      Text(task.note!,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                              color: Colors.grey, fontSize: 13)),
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 5),
+      child: Material(
+        color: done ? AppColors.doneBg : AppColors.surface,
+        borderRadius: BorderRadius.circular(AppColors.cardRadius),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(AppColors.cardRadius),
+          onTap: onOpen,
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(AppColors.cardRadius),
+              border: overdue
+                  ? Border.all(color: AppColors.red, width: 1.2)
+                  : null,
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+            child: Row(
+              children: [
+                GestureDetector(
+                  onTap: onToggle,
+                  behavior: HitTestBehavior.opaque,
+                  child: _StatusCircle(status: task.status),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(task.title,
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w500,
+                            decoration:
+                                done ? TextDecoration.lineThrough : null,
+                            color: done
+                                ? AppColors.textSecondary
+                                : AppColors.textPrimary,
+                          )),
+                      if (task.note != null && task.note!.isNotEmpty) ...[
+                        const SizedBox(height: 2),
+                        Text(task.note!,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                                color: AppColors.textSecondary, fontSize: 13)),
+                      ],
                     ],
-                  ],
+                  ),
                 ),
-              ),
-              if (overdue)
-                const Padding(
-                  padding: EdgeInsets.only(left: 6),
-                  child: Icon(Icons.warning_amber_rounded,
-                      color: Colors.red, size: 20),
-                ),
-              IconButton(
-                icon: const Icon(Icons.delete_outline, size: 20),
-                color: Colors.grey,
-                onPressed: onDelete,
-              ),
-            ],
+                if (overdue)
+                  const Icon(Icons.warning_amber_rounded,
+                      color: AppColors.red, size: 20),
+              ],
+            ),
           ),
         ),
       ),
@@ -244,49 +242,38 @@ class _PlanTaskCard extends StatelessWidget {
 }
 
 class _StatusCircle extends StatelessWidget {
-  const _StatusCircle({required this.status, required this.onTap});
+  const _StatusCircle({required this.status});
   final TaskStatus status;
-  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    IconData? icon;
-    Color color;
-    switch (status) {
-      case TaskStatus.todo:
-        icon = null;
-        color = Colors.grey;
-        break;
-      case TaskStatus.doing:
-        icon = Icons.timelapse;
-        color = _accent;
-        break;
-      case TaskStatus.done:
-        icon = Icons.check;
-        color = Colors.green;
-        break;
+    if (status == TaskStatus.done) {
+      return const Icon(Icons.check_circle, color: AppColors.green, size: 26);
     }
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 26,
-        height: 26,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          border: Border.all(color: color, width: 2),
-          color: status == TaskStatus.done ? Colors.green : Colors.transparent,
+    if (status == TaskStatus.doing) {
+      return const SizedBox(
+        width: 24,
+        height: 24,
+        child: CircularProgressIndicator(
+          strokeWidth: 3,
+          value: 0.75,
+          color: AppColors.accent,
+          backgroundColor: AppColors.progressTrack,
         ),
-        child: icon == null
-            ? null
-            : Icon(icon,
-                size: 16,
-                color: status == TaskStatus.done ? Colors.white : color),
+      );
+    }
+    return Container(
+      width: 24,
+      height: 24,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        border: Border.all(color: AppColors.textSecondary, width: 2),
       ),
     );
   }
 }
 
-// ─── صفحهٔ جزئیاتِ مشترکِ تسک (فعلاً همین‌جا؛ بعداً برای «امروز» جداش می‌کنیم) ───
+// ─── جزئیاتِ مشترکِ تسک (با انتخابگرِ چرخشی) ───
 
 class TaskDetailScreen extends ConsumerStatefulWidget {
   const TaskDetailScreen({super.key, required this.task});
@@ -343,29 +330,19 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
   }
 
   Future<void> _pickDateTime() async {
-    final now = DateTime.now();
-    final date = await showDatePicker(
-      context: context,
-      initialDate: _dueDate ?? now,
-      firstDate: DateTime(now.year - 1),
-      lastDate: DateTime(now.year + 5),
+    final isFa = ref.read(localeProvider).languageCode == 'fa';
+    final picked = await showWheelDateTime(
+      context,
+      initial: _dueDate,
+      mode: ref.read(calendarModeProvider),
+      isFa: isFa,
     );
-    if (date == null || !mounted) return;
-    final time = await showTimePicker(
-      context: context,
-      initialTime: TimeOfDay.fromDateTime(_dueDate ?? now),
-    );
-    setState(() {
-      _dueDate = DateTime(
-          date.year, date.month, date.day, time?.hour ?? 0, time?.minute ?? 0);
-    });
+    if (picked != null) setState(() => _dueDate = picked);
   }
 
-  String _clock(DateTime dt) {
-    final h = dt.hour.toString().padLeft(2, '0');
-    final m = dt.minute.toString().padLeft(2, '0');
-    return toFaDigits('$h:$m');
-  }
+  String _clock(DateTime dt) =>
+      toFaDigits('${dt.hour.toString().padLeft(2, '0')}:'
+          '${dt.minute.toString().padLeft(2, '0')}');
 
   @override
   Widget build(BuildContext context) {
@@ -379,13 +356,8 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
         title: Text(isFa ? 'جزئیات' : 'Details'),
         actions: [
           IconButton(
-              tooltip: s.deleteLabel,
-              icon: const Icon(Icons.delete_outline),
-              onPressed: _delete),
-          IconButton(
-              tooltip: s.saveLabel,
-              icon: const Icon(Icons.check),
-              onPressed: _save),
+              icon: const Icon(Icons.delete_outline), onPressed: _delete),
+          IconButton(icon: const Icon(Icons.check), onPressed: _save),
         ],
       ),
       body: ListView(
@@ -393,13 +365,12 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
         children: [
           TextField(
             controller: _titleCtrl,
-            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+            style:
+                const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
             decoration: InputDecoration(
-              border: InputBorder.none,
-              hintText: isFa ? 'عنوان' : 'Title',
-            ),
+                border: InputBorder.none, hintText: isFa ? 'عنوان' : 'Title'),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
           if (!isIdea) ...[
             _label(isFa ? 'وضعیت' : 'Status'),
             const SizedBox(height: 8),
@@ -417,37 +388,35 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
               ],
               selected: {_status},
               onSelectionChanged: (v) => setState(() => _status = v.first),
-              style: const ButtonStyle(visualDensity: VisualDensity.compact),
+              showSelectedIcon: false,
             ),
             const SizedBox(height: 22),
           ],
           _label(isFa ? 'توضیحات' : 'Notes'),
           const SizedBox(height: 8),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
             decoration: BoxDecoration(
-              color: Colors.grey.withOpacity(0.08),
-              borderRadius: BorderRadius.circular(12),
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(14),
             ),
             child: TextField(
               controller: _noteCtrl,
               maxLines: null,
               minLines: 4,
-              decoration: InputDecoration(
-                border: InputBorder.none,
-                hintText: s.noteHint,
-              ),
+              decoration:
+                  InputDecoration(border: InputBorder.none, hintText: s.noteHint),
             ),
           ),
           const SizedBox(height: 22),
           _label(isFa ? 'زمان' : 'Time'),
           const SizedBox(height: 8),
-          Card(
-            elevation: 0,
-            color: Colors.grey.withOpacity(0.08),
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          Material(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(14),
             child: ListTile(
+              shape:
+                  RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
               leading: const Icon(Icons.schedule),
               title: Text(_dueDate == null
                   ? s.addTime
@@ -456,7 +425,7 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
               trailing: _dueDate == null
                   ? null
                   : IconButton(
-                      icon: const Icon(Icons.close),
+                      icon: const Icon(Icons.close, size: 20),
                       onPressed: () => setState(() => _dueDate = null),
                     ),
               onTap: _pickDateTime,
@@ -467,6 +436,6 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
     );
   }
 
-  Widget _label(String t) =>
-      Text(t, style: const TextStyle(color: Colors.grey, fontSize: 13));
+  Widget _label(String t) => Text(t,
+      style: const TextStyle(color: AppColors.textSecondary, fontSize: 13));
 }
