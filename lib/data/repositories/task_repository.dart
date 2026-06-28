@@ -1,7 +1,7 @@
 import 'package:drift/drift.dart';
 import 'package:uuid/uuid.dart';
-import '../../databases/database/database.dart';
-import '../../databases/database/tables.dart';
+import '../database/database.dart';
+import '../database/tables.dart';
 import '../../domain/task_logic.dart';
 
 class TaskRepository {
