@@ -51,6 +51,12 @@ class $TasksTable extends Tasks with TableInfo<$TasksTable, Task> {
   late final GeneratedColumn<String> planId = GeneratedColumn<String>(
       'plan_id', aliasedName, true,
       type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _ideaFolderIdMeta =
+      const VerificationMeta('ideaFolderId');
+  @override
+  late final GeneratedColumn<String> ideaFolderId = GeneratedColumn<String>(
+      'idea_folder_id', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
   static const VerificationMeta _dueDateMeta =
       const VerificationMeta('dueDate');
   @override
@@ -103,6 +109,7 @@ class $TasksTable extends Tasks with TableInfo<$TasksTable, Task> {
         focus,
         day,
         planId,
+        ideaFolderId,
         dueDate,
         timeStart,
         timeEnd,
@@ -145,6 +152,12 @@ class $TasksTable extends Tasks with TableInfo<$TasksTable, Task> {
     if (data.containsKey('plan_id')) {
       context.handle(_planIdMeta,
           planId.isAcceptableOrUnknown(data['plan_id']!, _planIdMeta));
+    }
+    if (data.containsKey('idea_folder_id')) {
+      context.handle(
+          _ideaFolderIdMeta,
+          ideaFolderId.isAcceptableOrUnknown(
+              data['idea_folder_id']!, _ideaFolderIdMeta));
     }
     if (data.containsKey('due_date')) {
       context.handle(_dueDateMeta,
@@ -201,6 +214,8 @@ class $TasksTable extends Tasks with TableInfo<$TasksTable, Task> {
           .read(DriftSqlType.dateTime, data['${effectivePrefix}day']),
       planId: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}plan_id']),
+      ideaFolderId: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}idea_folder_id']),
       dueDate: attachedDatabase.typeMapping
           .read(DriftSqlType.dateTime, data['${effectivePrefix}due_date']),
       timeStart: attachedDatabase.typeMapping
@@ -237,6 +252,7 @@ class Task extends DataClass implements Insertable<Task> {
   final bool focus;
   final DateTime? day;
   final String? planId;
+  final String? ideaFolderId;
   final DateTime? dueDate;
   final int? timeStart;
   final int? timeEnd;
@@ -252,6 +268,7 @@ class Task extends DataClass implements Insertable<Task> {
       required this.focus,
       this.day,
       this.planId,
+      this.ideaFolderId,
       this.dueDate,
       this.timeStart,
       this.timeEnd,
@@ -276,6 +293,9 @@ class Task extends DataClass implements Insertable<Task> {
     }
     if (!nullToAbsent || planId != null) {
       map['plan_id'] = Variable<String>(planId);
+    }
+    if (!nullToAbsent || ideaFolderId != null) {
+      map['idea_folder_id'] = Variable<String>(ideaFolderId);
     }
     if (!nullToAbsent || dueDate != null) {
       map['due_date'] = Variable<DateTime>(dueDate);
@@ -305,6 +325,9 @@ class Task extends DataClass implements Insertable<Task> {
       day: day == null && nullToAbsent ? const Value.absent() : Value(day),
       planId:
           planId == null && nullToAbsent ? const Value.absent() : Value(planId),
+      ideaFolderId: ideaFolderId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(ideaFolderId),
       dueDate: dueDate == null && nullToAbsent
           ? const Value.absent()
           : Value(dueDate),
@@ -334,6 +357,7 @@ class Task extends DataClass implements Insertable<Task> {
       focus: serializer.fromJson<bool>(json['focus']),
       day: serializer.fromJson<DateTime?>(json['day']),
       planId: serializer.fromJson<String?>(json['planId']),
+      ideaFolderId: serializer.fromJson<String?>(json['ideaFolderId']),
       dueDate: serializer.fromJson<DateTime?>(json['dueDate']),
       timeStart: serializer.fromJson<int?>(json['timeStart']),
       timeEnd: serializer.fromJson<int?>(json['timeEnd']),
@@ -356,6 +380,7 @@ class Task extends DataClass implements Insertable<Task> {
       'focus': serializer.toJson<bool>(focus),
       'day': serializer.toJson<DateTime?>(day),
       'planId': serializer.toJson<String?>(planId),
+      'ideaFolderId': serializer.toJson<String?>(ideaFolderId),
       'dueDate': serializer.toJson<DateTime?>(dueDate),
       'timeStart': serializer.toJson<int?>(timeStart),
       'timeEnd': serializer.toJson<int?>(timeEnd),
@@ -374,6 +399,7 @@ class Task extends DataClass implements Insertable<Task> {
           bool? focus,
           Value<DateTime?> day = const Value.absent(),
           Value<String?> planId = const Value.absent(),
+          Value<String?> ideaFolderId = const Value.absent(),
           Value<DateTime?> dueDate = const Value.absent(),
           Value<int?> timeStart = const Value.absent(),
           Value<int?> timeEnd = const Value.absent(),
@@ -389,6 +415,8 @@ class Task extends DataClass implements Insertable<Task> {
         focus: focus ?? this.focus,
         day: day.present ? day.value : this.day,
         planId: planId.present ? planId.value : this.planId,
+        ideaFolderId:
+            ideaFolderId.present ? ideaFolderId.value : this.ideaFolderId,
         dueDate: dueDate.present ? dueDate.value : this.dueDate,
         timeStart: timeStart.present ? timeStart.value : this.timeStart,
         timeEnd: timeEnd.present ? timeEnd.value : this.timeEnd,
@@ -406,6 +434,9 @@ class Task extends DataClass implements Insertable<Task> {
       focus: data.focus.present ? data.focus.value : this.focus,
       day: data.day.present ? data.day.value : this.day,
       planId: data.planId.present ? data.planId.value : this.planId,
+      ideaFolderId: data.ideaFolderId.present
+          ? data.ideaFolderId.value
+          : this.ideaFolderId,
       dueDate: data.dueDate.present ? data.dueDate.value : this.dueDate,
       timeStart: data.timeStart.present ? data.timeStart.value : this.timeStart,
       timeEnd: data.timeEnd.present ? data.timeEnd.value : this.timeEnd,
@@ -426,6 +457,7 @@ class Task extends DataClass implements Insertable<Task> {
           ..write('focus: $focus, ')
           ..write('day: $day, ')
           ..write('planId: $planId, ')
+          ..write('ideaFolderId: $ideaFolderId, ')
           ..write('dueDate: $dueDate, ')
           ..write('timeStart: $timeStart, ')
           ..write('timeEnd: $timeEnd, ')
@@ -438,8 +470,22 @@ class Task extends DataClass implements Insertable<Task> {
   }
 
   @override
-  int get hashCode => Object.hash(id, title, status, bucket, focus, day, planId,
-      dueDate, timeStart, timeEnd, note, orderKey, createdAt, updatedAt);
+  int get hashCode => Object.hash(
+      id,
+      title,
+      status,
+      bucket,
+      focus,
+      day,
+      planId,
+      ideaFolderId,
+      dueDate,
+      timeStart,
+      timeEnd,
+      note,
+      orderKey,
+      createdAt,
+      updatedAt);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -451,6 +497,7 @@ class Task extends DataClass implements Insertable<Task> {
           other.focus == this.focus &&
           other.day == this.day &&
           other.planId == this.planId &&
+          other.ideaFolderId == this.ideaFolderId &&
           other.dueDate == this.dueDate &&
           other.timeStart == this.timeStart &&
           other.timeEnd == this.timeEnd &&
@@ -468,6 +515,7 @@ class TasksCompanion extends UpdateCompanion<Task> {
   final Value<bool> focus;
   final Value<DateTime?> day;
   final Value<String?> planId;
+  final Value<String?> ideaFolderId;
   final Value<DateTime?> dueDate;
   final Value<int?> timeStart;
   final Value<int?> timeEnd;
@@ -484,6 +532,7 @@ class TasksCompanion extends UpdateCompanion<Task> {
     this.focus = const Value.absent(),
     this.day = const Value.absent(),
     this.planId = const Value.absent(),
+    this.ideaFolderId = const Value.absent(),
     this.dueDate = const Value.absent(),
     this.timeStart = const Value.absent(),
     this.timeEnd = const Value.absent(),
@@ -501,6 +550,7 @@ class TasksCompanion extends UpdateCompanion<Task> {
     this.focus = const Value.absent(),
     this.day = const Value.absent(),
     this.planId = const Value.absent(),
+    this.ideaFolderId = const Value.absent(),
     this.dueDate = const Value.absent(),
     this.timeStart = const Value.absent(),
     this.timeEnd = const Value.absent(),
@@ -522,6 +572,7 @@ class TasksCompanion extends UpdateCompanion<Task> {
     Expression<bool>? focus,
     Expression<DateTime>? day,
     Expression<String>? planId,
+    Expression<String>? ideaFolderId,
     Expression<DateTime>? dueDate,
     Expression<int>? timeStart,
     Expression<int>? timeEnd,
@@ -539,6 +590,7 @@ class TasksCompanion extends UpdateCompanion<Task> {
       if (focus != null) 'focus': focus,
       if (day != null) 'day': day,
       if (planId != null) 'plan_id': planId,
+      if (ideaFolderId != null) 'idea_folder_id': ideaFolderId,
       if (dueDate != null) 'due_date': dueDate,
       if (timeStart != null) 'time_start': timeStart,
       if (timeEnd != null) 'time_end': timeEnd,
@@ -558,6 +610,7 @@ class TasksCompanion extends UpdateCompanion<Task> {
       Value<bool>? focus,
       Value<DateTime?>? day,
       Value<String?>? planId,
+      Value<String?>? ideaFolderId,
       Value<DateTime?>? dueDate,
       Value<int?>? timeStart,
       Value<int?>? timeEnd,
@@ -574,6 +627,7 @@ class TasksCompanion extends UpdateCompanion<Task> {
       focus: focus ?? this.focus,
       day: day ?? this.day,
       planId: planId ?? this.planId,
+      ideaFolderId: ideaFolderId ?? this.ideaFolderId,
       dueDate: dueDate ?? this.dueDate,
       timeStart: timeStart ?? this.timeStart,
       timeEnd: timeEnd ?? this.timeEnd,
@@ -610,6 +664,9 @@ class TasksCompanion extends UpdateCompanion<Task> {
     }
     if (planId.present) {
       map['plan_id'] = Variable<String>(planId.value);
+    }
+    if (ideaFolderId.present) {
+      map['idea_folder_id'] = Variable<String>(ideaFolderId.value);
     }
     if (dueDate.present) {
       map['due_date'] = Variable<DateTime>(dueDate.value);
@@ -648,6 +705,7 @@ class TasksCompanion extends UpdateCompanion<Task> {
           ..write('focus: $focus, ')
           ..write('day: $day, ')
           ..write('planId: $planId, ')
+          ..write('ideaFolderId: $ideaFolderId, ')
           ..write('dueDate: $dueDate, ')
           ..write('timeStart: $timeStart, ')
           ..write('timeEnd: $timeEnd, ')
@@ -1060,6 +1118,11 @@ class $IdeaFoldersTable extends IdeaFolders
   late final GeneratedColumn<String> name = GeneratedColumn<String>(
       'name', aliasedName, false,
       type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _iconMeta = const VerificationMeta('icon');
+  @override
+  late final GeneratedColumn<String> icon = GeneratedColumn<String>(
+      'icon', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
   static const VerificationMeta _orderKeyMeta =
       const VerificationMeta('orderKey');
   @override
@@ -1075,7 +1138,7 @@ class $IdeaFoldersTable extends IdeaFolders
       'created_at', aliasedName, false,
       type: DriftSqlType.dateTime, requiredDuringInsert: true);
   @override
-  List<GeneratedColumn> get $columns => [id, name, orderKey, createdAt];
+  List<GeneratedColumn> get $columns => [id, name, icon, orderKey, createdAt];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -1096,6 +1159,10 @@ class $IdeaFoldersTable extends IdeaFolders
           _nameMeta, name.isAcceptableOrUnknown(data['name']!, _nameMeta));
     } else if (isInserting) {
       context.missing(_nameMeta);
+    }
+    if (data.containsKey('icon')) {
+      context.handle(
+          _iconMeta, icon.isAcceptableOrUnknown(data['icon']!, _iconMeta));
     }
     if (data.containsKey('order_key')) {
       context.handle(_orderKeyMeta,
@@ -1120,6 +1187,8 @@ class $IdeaFoldersTable extends IdeaFolders
           .read(DriftSqlType.string, data['${effectivePrefix}id'])!,
       name: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}name'])!,
+      icon: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}icon']),
       orderKey: attachedDatabase.typeMapping
           .read(DriftSqlType.double, data['${effectivePrefix}order_key'])!,
       createdAt: attachedDatabase.typeMapping
@@ -1136,11 +1205,13 @@ class $IdeaFoldersTable extends IdeaFolders
 class IdeaFolder extends DataClass implements Insertable<IdeaFolder> {
   final String id;
   final String name;
+  final String? icon;
   final double orderKey;
   final DateTime createdAt;
   const IdeaFolder(
       {required this.id,
       required this.name,
+      this.icon,
       required this.orderKey,
       required this.createdAt});
   @override
@@ -1148,6 +1219,9 @@ class IdeaFolder extends DataClass implements Insertable<IdeaFolder> {
     final map = <String, Expression>{};
     map['id'] = Variable<String>(id);
     map['name'] = Variable<String>(name);
+    if (!nullToAbsent || icon != null) {
+      map['icon'] = Variable<String>(icon);
+    }
     map['order_key'] = Variable<double>(orderKey);
     map['created_at'] = Variable<DateTime>(createdAt);
     return map;
@@ -1157,6 +1231,7 @@ class IdeaFolder extends DataClass implements Insertable<IdeaFolder> {
     return IdeaFoldersCompanion(
       id: Value(id),
       name: Value(name),
+      icon: icon == null && nullToAbsent ? const Value.absent() : Value(icon),
       orderKey: Value(orderKey),
       createdAt: Value(createdAt),
     );
@@ -1168,6 +1243,7 @@ class IdeaFolder extends DataClass implements Insertable<IdeaFolder> {
     return IdeaFolder(
       id: serializer.fromJson<String>(json['id']),
       name: serializer.fromJson<String>(json['name']),
+      icon: serializer.fromJson<String?>(json['icon']),
       orderKey: serializer.fromJson<double>(json['orderKey']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
     );
@@ -1178,16 +1254,22 @@ class IdeaFolder extends DataClass implements Insertable<IdeaFolder> {
     return <String, dynamic>{
       'id': serializer.toJson<String>(id),
       'name': serializer.toJson<String>(name),
+      'icon': serializer.toJson<String?>(icon),
       'orderKey': serializer.toJson<double>(orderKey),
       'createdAt': serializer.toJson<DateTime>(createdAt),
     };
   }
 
   IdeaFolder copyWith(
-          {String? id, String? name, double? orderKey, DateTime? createdAt}) =>
+          {String? id,
+          String? name,
+          Value<String?> icon = const Value.absent(),
+          double? orderKey,
+          DateTime? createdAt}) =>
       IdeaFolder(
         id: id ?? this.id,
         name: name ?? this.name,
+        icon: icon.present ? icon.value : this.icon,
         orderKey: orderKey ?? this.orderKey,
         createdAt: createdAt ?? this.createdAt,
       );
@@ -1195,6 +1277,7 @@ class IdeaFolder extends DataClass implements Insertable<IdeaFolder> {
     return IdeaFolder(
       id: data.id.present ? data.id.value : this.id,
       name: data.name.present ? data.name.value : this.name,
+      icon: data.icon.present ? data.icon.value : this.icon,
       orderKey: data.orderKey.present ? data.orderKey.value : this.orderKey,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
     );
@@ -1205,6 +1288,7 @@ class IdeaFolder extends DataClass implements Insertable<IdeaFolder> {
     return (StringBuffer('IdeaFolder(')
           ..write('id: $id, ')
           ..write('name: $name, ')
+          ..write('icon: $icon, ')
           ..write('orderKey: $orderKey, ')
           ..write('createdAt: $createdAt')
           ..write(')'))
@@ -1212,13 +1296,14 @@ class IdeaFolder extends DataClass implements Insertable<IdeaFolder> {
   }
 
   @override
-  int get hashCode => Object.hash(id, name, orderKey, createdAt);
+  int get hashCode => Object.hash(id, name, icon, orderKey, createdAt);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is IdeaFolder &&
           other.id == this.id &&
           other.name == this.name &&
+          other.icon == this.icon &&
           other.orderKey == this.orderKey &&
           other.createdAt == this.createdAt);
 }
@@ -1226,12 +1311,14 @@ class IdeaFolder extends DataClass implements Insertable<IdeaFolder> {
 class IdeaFoldersCompanion extends UpdateCompanion<IdeaFolder> {
   final Value<String> id;
   final Value<String> name;
+  final Value<String?> icon;
   final Value<double> orderKey;
   final Value<DateTime> createdAt;
   final Value<int> rowid;
   const IdeaFoldersCompanion({
     this.id = const Value.absent(),
     this.name = const Value.absent(),
+    this.icon = const Value.absent(),
     this.orderKey = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -1239,6 +1326,7 @@ class IdeaFoldersCompanion extends UpdateCompanion<IdeaFolder> {
   IdeaFoldersCompanion.insert({
     required String id,
     required String name,
+    this.icon = const Value.absent(),
     this.orderKey = const Value.absent(),
     required DateTime createdAt,
     this.rowid = const Value.absent(),
@@ -1248,6 +1336,7 @@ class IdeaFoldersCompanion extends UpdateCompanion<IdeaFolder> {
   static Insertable<IdeaFolder> custom({
     Expression<String>? id,
     Expression<String>? name,
+    Expression<String>? icon,
     Expression<double>? orderKey,
     Expression<DateTime>? createdAt,
     Expression<int>? rowid,
@@ -1255,6 +1344,7 @@ class IdeaFoldersCompanion extends UpdateCompanion<IdeaFolder> {
     return RawValuesInsertable({
       if (id != null) 'id': id,
       if (name != null) 'name': name,
+      if (icon != null) 'icon': icon,
       if (orderKey != null) 'order_key': orderKey,
       if (createdAt != null) 'created_at': createdAt,
       if (rowid != null) 'rowid': rowid,
@@ -1264,12 +1354,14 @@ class IdeaFoldersCompanion extends UpdateCompanion<IdeaFolder> {
   IdeaFoldersCompanion copyWith(
       {Value<String>? id,
       Value<String>? name,
+      Value<String?>? icon,
       Value<double>? orderKey,
       Value<DateTime>? createdAt,
       Value<int>? rowid}) {
     return IdeaFoldersCompanion(
       id: id ?? this.id,
       name: name ?? this.name,
+      icon: icon ?? this.icon,
       orderKey: orderKey ?? this.orderKey,
       createdAt: createdAt ?? this.createdAt,
       rowid: rowid ?? this.rowid,
@@ -1284,6 +1376,9 @@ class IdeaFoldersCompanion extends UpdateCompanion<IdeaFolder> {
     }
     if (name.present) {
       map['name'] = Variable<String>(name.value);
+    }
+    if (icon.present) {
+      map['icon'] = Variable<String>(icon.value);
     }
     if (orderKey.present) {
       map['order_key'] = Variable<double>(orderKey.value);
@@ -1302,6 +1397,7 @@ class IdeaFoldersCompanion extends UpdateCompanion<IdeaFolder> {
     return (StringBuffer('IdeaFoldersCompanion(')
           ..write('id: $id, ')
           ..write('name: $name, ')
+          ..write('icon: $icon, ')
           ..write('orderKey: $orderKey, ')
           ..write('createdAt: $createdAt, ')
           ..write('rowid: $rowid')
@@ -1754,6 +1850,7 @@ typedef $$TasksTableCreateCompanionBuilder = TasksCompanion Function({
   Value<bool> focus,
   Value<DateTime?> day,
   Value<String?> planId,
+  Value<String?> ideaFolderId,
   Value<DateTime?> dueDate,
   Value<int?> timeStart,
   Value<int?> timeEnd,
@@ -1771,6 +1868,7 @@ typedef $$TasksTableUpdateCompanionBuilder = TasksCompanion Function({
   Value<bool> focus,
   Value<DateTime?> day,
   Value<String?> planId,
+  Value<String?> ideaFolderId,
   Value<DateTime?> dueDate,
   Value<int?> timeStart,
   Value<int?> timeEnd,
@@ -1805,6 +1903,7 @@ class $$TasksTableTableManager extends RootTableManager<
             Value<bool> focus = const Value.absent(),
             Value<DateTime?> day = const Value.absent(),
             Value<String?> planId = const Value.absent(),
+            Value<String?> ideaFolderId = const Value.absent(),
             Value<DateTime?> dueDate = const Value.absent(),
             Value<int?> timeStart = const Value.absent(),
             Value<int?> timeEnd = const Value.absent(),
@@ -1822,6 +1921,7 @@ class $$TasksTableTableManager extends RootTableManager<
             focus: focus,
             day: day,
             planId: planId,
+            ideaFolderId: ideaFolderId,
             dueDate: dueDate,
             timeStart: timeStart,
             timeEnd: timeEnd,
@@ -1839,6 +1939,7 @@ class $$TasksTableTableManager extends RootTableManager<
             Value<bool> focus = const Value.absent(),
             Value<DateTime?> day = const Value.absent(),
             Value<String?> planId = const Value.absent(),
+            Value<String?> ideaFolderId = const Value.absent(),
             Value<DateTime?> dueDate = const Value.absent(),
             Value<int?> timeStart = const Value.absent(),
             Value<int?> timeEnd = const Value.absent(),
@@ -1856,6 +1957,7 @@ class $$TasksTableTableManager extends RootTableManager<
             focus: focus,
             day: day,
             planId: planId,
+            ideaFolderId: ideaFolderId,
             dueDate: dueDate,
             timeStart: timeStart,
             timeEnd: timeEnd,
@@ -1907,6 +2009,11 @@ class $$TasksTableFilterComposer
 
   ColumnFilters<String> get planId => $state.composableBuilder(
       column: $state.table.planId,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<String> get ideaFolderId => $state.composableBuilder(
+      column: $state.table.ideaFolderId,
       builder: (column, joinBuilders) =>
           ColumnFilters(column, joinBuilders: joinBuilders));
 
@@ -1981,6 +2088,11 @@ class $$TasksTableOrderingComposer
 
   ColumnOrderings<String> get planId => $state.composableBuilder(
       column: $state.table.planId,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<String> get ideaFolderId => $state.composableBuilder(
+      column: $state.table.ideaFolderId,
       builder: (column, joinBuilders) =>
           ColumnOrderings(column, joinBuilders: joinBuilders));
 
@@ -2182,6 +2294,7 @@ typedef $$IdeaFoldersTableCreateCompanionBuilder = IdeaFoldersCompanion
     Function({
   required String id,
   required String name,
+  Value<String?> icon,
   Value<double> orderKey,
   required DateTime createdAt,
   Value<int> rowid,
@@ -2190,6 +2303,7 @@ typedef $$IdeaFoldersTableUpdateCompanionBuilder = IdeaFoldersCompanion
     Function({
   Value<String> id,
   Value<String> name,
+  Value<String?> icon,
   Value<double> orderKey,
   Value<DateTime> createdAt,
   Value<int> rowid,
@@ -2214,6 +2328,7 @@ class $$IdeaFoldersTableTableManager extends RootTableManager<
           updateCompanionCallback: ({
             Value<String> id = const Value.absent(),
             Value<String> name = const Value.absent(),
+            Value<String?> icon = const Value.absent(),
             Value<double> orderKey = const Value.absent(),
             Value<DateTime> createdAt = const Value.absent(),
             Value<int> rowid = const Value.absent(),
@@ -2221,6 +2336,7 @@ class $$IdeaFoldersTableTableManager extends RootTableManager<
               IdeaFoldersCompanion(
             id: id,
             name: name,
+            icon: icon,
             orderKey: orderKey,
             createdAt: createdAt,
             rowid: rowid,
@@ -2228,6 +2344,7 @@ class $$IdeaFoldersTableTableManager extends RootTableManager<
           createCompanionCallback: ({
             required String id,
             required String name,
+            Value<String?> icon = const Value.absent(),
             Value<double> orderKey = const Value.absent(),
             required DateTime createdAt,
             Value<int> rowid = const Value.absent(),
@@ -2235,6 +2352,7 @@ class $$IdeaFoldersTableTableManager extends RootTableManager<
               IdeaFoldersCompanion.insert(
             id: id,
             name: name,
+            icon: icon,
             orderKey: orderKey,
             createdAt: createdAt,
             rowid: rowid,
@@ -2252,6 +2370,11 @@ class $$IdeaFoldersTableFilterComposer
 
   ColumnFilters<String> get name => $state.composableBuilder(
       column: $state.table.name,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<String> get icon => $state.composableBuilder(
+      column: $state.table.icon,
       builder: (column, joinBuilders) =>
           ColumnFilters(column, joinBuilders: joinBuilders));
 
@@ -2276,6 +2399,11 @@ class $$IdeaFoldersTableOrderingComposer
 
   ColumnOrderings<String> get name => $state.composableBuilder(
       column: $state.table.name,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<String> get icon => $state.composableBuilder(
+      column: $state.table.icon,
       builder: (column, joinBuilders) =>
           ColumnOrderings(column, joinBuilders: joinBuilders));
 

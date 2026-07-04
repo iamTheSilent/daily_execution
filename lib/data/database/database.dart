@@ -9,7 +9,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(openConnection());
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -17,6 +17,10 @@ class AppDatabase extends _$AppDatabase {
         onUpgrade: (m, from, to) async {
           if (from < 2) {
             await m.addColumn(ideaItems, ideaItems.scheduledAt);
+          }
+          if (from < 3) {
+            await m.addColumn(tasks, tasks.ideaFolderId);
+            await m.addColumn(ideaFolders, ideaFolders.icon);
           }
         },
       );
@@ -76,6 +80,63 @@ class AppDatabase extends _$AppDatabase {
           updatedAt: Value(DateTime.now()),
         ),
       );
+
+  // ─── Idea Folders (پوشه‌های ایده) ─────────────────────────────────────────────
+  Stream<List<IdeaFolder>> watchIdeaFolders() =>
+      (select(ideaFolders)..orderBy([(f) => OrderingTerm.asc(f.orderKey)]))
+          .watch();
+
+  Future<void> upsertIdeaFolder(IdeaFoldersCompanion f) =>
+      into(ideaFolders).insertOnConflictUpdate(f);
+
+  Future<void> updateIdeaFolder(String id,
+          {required String name, String? icon}) =>
+      (update(ideaFolders)..where((f) => f.id.equals(id))).write(
+        IdeaFoldersCompanion(name: Value(name), icon: Value(icon)),
+      );
+
+  /// ایده‌های داخلِ یک پوشه (folderId=null یعنی «بدونِ پوشه»)
+  Stream<List<Task>> watchIdeasInFolder(String? folderId) {
+    return (select(tasks)
+          ..where((t) =>
+              t.bucket.equalsValue(TaskBucket.idea) &
+              (folderId == null
+                  ? t.ideaFolderId.isNull()
+                  : t.ideaFolderId.equals(folderId)))
+          ..orderBy([(t) => OrderingTerm.asc(t.orderKey)]))
+        .watch();
+  }
+
+  Future<void> moveIdeaToFolder(String ideaId, String? folderId) =>
+      (update(tasks)..where((t) => t.id.equals(ideaId))).write(
+        TasksCompanion(
+          ideaFolderId: Value(folderId),
+          updatedAt: Value(DateTime.now()),
+        ),
+      );
+
+  /// حذفِ پوشه + حذفِ همهٔ ایده‌های داخلش
+  Future<void> deleteFolderAndIdeas(String folderId) async {
+    await (delete(tasks)
+          ..where((t) =>
+              t.bucket.equalsValue(TaskBucket.idea) &
+              t.ideaFolderId.equals(folderId)))
+        .go();
+    await (delete(ideaFolders)..where((f) => f.id.equals(folderId))).go();
+  }
+
+  /// حذفِ پوشه ولی ایده‌هاش می‌رن به «بدونِ پوشه»
+  Future<void> deleteFolderKeepIdeas(String folderId) async {
+    await (update(tasks)
+          ..where((t) =>
+              t.bucket.equalsValue(TaskBucket.idea) &
+              t.ideaFolderId.equals(folderId)))
+        .write(TasksCompanion(
+      ideaFolderId: const Value(null),
+      updatedAt: Value(DateTime.now()),
+    ));
+    await (delete(ideaFolders)..where((f) => f.id.equals(folderId))).go();
+  }
 
   // ─── Plans ───────────────────────────────────────────────────────────────────
   Stream<List<Plan>> watchPlans() =>

@@ -44,8 +44,9 @@ class TaskRepository {
   Future<void> cycleStatus(Task t) =>
       _db.setStatus(t.id, nextStatus(t.status));
 
+  // ✅ رفعِ باگِ Save: قبلاً toCompanion(true) بود و مقدارهای خالی‌شده ذخیره نمی‌شد.
   Future<void> save(Task t) => _db.upsertTask(
-        t.toCompanion(true).copyWith(updatedAt: Value(DateTime.now())),
+        t.toCompanion(false).copyWith(updatedAt: Value(DateTime.now())),
       );
 
   Future<void> delete(String id) => _db.deleteTask(id);

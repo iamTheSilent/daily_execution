@@ -12,6 +12,7 @@ class Tasks extends Table {
   BoolColumn get focus => boolean().withDefault(const Constant(false))();
   DateTimeColumn get day => dateTime().nullable()();
   TextColumn get planId => text().nullable()();
+  TextColumn get ideaFolderId => text().nullable()(); // ← جدید: پوشهٔ ایده
   DateTimeColumn get dueDate => dateTime().nullable()();
   IntColumn get timeStart => integer().nullable()();
   IntColumn get timeEnd => integer().nullable()();
@@ -40,6 +41,7 @@ class Plans extends Table {
 class IdeaFolders extends Table {
   TextColumn get id => text()();
   TextColumn get name => text()();
+  TextColumn get icon => text().nullable()(); // ← جدید: ایموجیِ پوشه
   RealColumn get orderKey => real().withDefault(const Constant(0))();
   DateTimeColumn get createdAt => dateTime()();
 

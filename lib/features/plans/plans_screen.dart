@@ -4,7 +4,7 @@ import '../../core/l10n/app_strings.dart';
 import '../../data/database/database.dart';
 import '../../data/database/tables.dart';
 import '../../providers/app_providers.dart';
-import 'idea_detail_screen.dart';
+import 'idea_folder_screen.dart';
 import 'plan_detail_screen.dart';
 
 const _accent = Color(0xFFFF9500);
@@ -22,8 +22,6 @@ class _PlansScreenState extends ConsumerState<PlansScreen> {
   @override
   Widget build(BuildContext context) {
     final s = ref.watch(appStringsProvider);
-    final plansAsync = ref.watch(plansProvider);
-    final ideasAsync = ref.watch(ideasProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -32,8 +30,8 @@ class _PlansScreenState extends ConsumerState<PlansScreen> {
             style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
         leading: IconButton(
           icon: const Icon(Icons.add),
-          tooltip: _tab == 0 ? s.tabPlans : s.tabIdeas,
-          onPressed: _tab == 0 ? () => _addPlan(s) : () => _addIdea(s),
+          tooltip: _tab == 0 ? s.tabPlans : s.newFolder,
+          onPressed: _tab == 0 ? () => _addPlan(s) : () => _addFolder(s),
         ),
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(52),
@@ -54,8 +52,8 @@ class _PlansScreenState extends ConsumerState<PlansScreen> {
       body: IndexedStack(
         index: _tab,
         children: [
-          _buildPlansTab(s, plansAsync),
-          _buildIdeasTab(s, ideasAsync),
+          _buildPlansTab(s),
+          _buildIdeasTab(s),
         ],
       ),
     );
@@ -63,7 +61,8 @@ class _PlansScreenState extends ConsumerState<PlansScreen> {
 
   // ─── تب برنامه‌ها ────────────────────────────────────────────────────────────
 
-  Widget _buildPlansTab(AppStrings s, AsyncValue<List<Plan>> async) {
+  Widget _buildPlansTab(AppStrings s) {
+    final async = ref.watch(plansProvider);
     return async.when(
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (e, _) => Center(child: Text('$e')),
@@ -112,78 +111,112 @@ class _PlansScreenState extends ConsumerState<PlansScreen> {
     await ref.read(planRepositoryProvider).deletePlan(plan.id);
   }
 
-  // ─── تب ایده‌ها ──────────────────────────────────────────────────────────────
+  // ─── تب ایده‌ها (لیستِ پوشه‌ها) ───────────────────────────────────────────────
 
-  Widget _buildIdeasTab(AppStrings s, AsyncValue<List<Task>> async) {
-    return async.when(
+  Widget _buildIdeasTab(AppStrings s) {
+    final foldersAsync = ref.watch(ideaFoldersProvider);
+    final ideasAsync = ref.watch(ideasProvider);
+
+    return foldersAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (e, _) => Center(child: Text('$e')),
-      data: (ideas) {
-        if (ideas.isEmpty) {
+      data: (folders) {
+        final ideas = ideasAsync.valueOrNull ?? const <Task>[];
+        final uncategorized =
+            ideas.where((t) => t.ideaFolderId == null).length;
+
+        if (folders.isEmpty && uncategorized == 0) {
           return Center(
-            child: Text(s.emptyIdeas,
+            child: Text(s.emptyFolders,
                 textAlign: TextAlign.center,
                 style: const TextStyle(color: Colors.grey, height: 1.8)),
           );
         }
-        return ListView.builder(
+
+        return ListView(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          itemCount: ideas.length,
-          itemBuilder: (_, i) => _IdeaTile(
-            idea: ideas[i],
-            strings: s,
-            onOpen: () => Navigator.push(
-              context,
-              MaterialPageRoute(
-                  builder: (_) => IdeaDetailScreen(idea: ideas[i])),
+          children: [
+            for (final f in folders)
+              _FolderTile(
+                title: f.name,
+                icon: f.icon ?? '📁',
+                count: ideas.where((t) => t.ideaFolderId == f.id).length,
+                strings: s,
+                onOpen: () => _openFolder(f),
+                onEdit: () => _editFolder(f, s),
+                onDelete: () => _deleteFolder(f, s),
+              ),
+            if (uncategorized > 0)
+              _FolderTile(
+                title: s.uncategorized,
+                icon: '🗂️',
+                count: uncategorized,
+                strings: s,
+                onOpen: () => _openFolder(null),
+              ),
+            const SizedBox(height: 8),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              child: OutlinedButton.icon(
+                onPressed: () => _addFolder(s),
+                icon: const Icon(Icons.create_new_folder_outlined),
+                label: Text(s.newFolder),
+              ),
             ),
-            onConvert: () => _convertToPlan(ideas[i], s),
-            onSendToday: () => _sendToToday(ideas[i], s),
-            onDelete: () => _deleteIdea(ideas[i], s),
-          ),
+          ],
         );
       },
     );
   }
 
-  Future<void> _addIdea(AppStrings s) async {
-    final title = await _inputSheet(context, hint: s.newIdeaHint);
-    if (title == null || title.trim().isEmpty) return;
-    await ref.read(ideaRepositoryProvider).addIdea(title.trim());
+  void _openFolder(IdeaFolder? folder) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => IdeaFolderScreen(folder: folder)),
+    );
   }
 
-  Future<void> _convertToPlan(Task idea, AppStrings s) async {
-    await ref.read(ideaRepositoryProvider).convertToPlan(idea);
-    if (!mounted) return;
-    final messenger = ScaffoldMessenger.of(context);
-    messenger.hideCurrentSnackBar();
-    messenger.showSnackBar(SnackBar(
-      content: Text(s.convertedMsg),
-      duration: const Duration(milliseconds: 1500),
-      action: SnackBarAction(
-        label: s.viewLabel,
-        onPressed: () {
-          messenger.hideCurrentSnackBar();
-          setState(() => _tab = 0);
-        },
+  Future<void> _addFolder(AppStrings s) async {
+    final res = await _folderSheet(context, s);
+    if (res == null) return;
+    await ref.read(ideaRepositoryProvider).createFolder(res.name, res.icon);
+  }
+
+  Future<void> _editFolder(IdeaFolder f, AppStrings s) async {
+    final res = await _folderSheet(context, s,
+        initialName: f.name, initialIcon: f.icon);
+    if (res == null) return;
+    await ref
+        .read(ideaRepositoryProvider)
+        .renameFolder(f.id, res.name, res.icon);
+  }
+
+  Future<void> _deleteFolder(IdeaFolder f, AppStrings s) async {
+    final choice = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(s.deleteFolderQ),
+        content: Text(s.deleteFolderMsg),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: Text(s.cancelLabel)),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, 'keep'),
+              child: Text(s.keepIdeasLabel)),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, 'all'),
+              child: Text(s.deleteAllLabel,
+                  style: const TextStyle(color: Colors.red))),
+        ],
       ),
-    ));
-  }
-
-  Future<void> _sendToToday(Task idea, AppStrings s) async {
-    await ref.read(ideaRepositoryProvider).sendToDay(idea, DateTime.now());
-    if (!mounted) return;
-    final messenger = ScaffoldMessenger.of(context);
-    messenger.hideCurrentSnackBar();
-    messenger.showSnackBar(SnackBar(
-      content: Text(s.sentToTodayMsg),
-      duration: const Duration(milliseconds: 1500),
-    ));
-  }
-
-  Future<void> _deleteIdea(Task idea, AppStrings s) async {
-    if (!await _confirmDelete(s)) return;
-    await ref.read(ideaRepositoryProvider).deleteIdea(idea.id);
+    );
+    final repo = ref.read(ideaRepositoryProvider);
+    if (choice == 'all') {
+      await repo.deleteFolderAndIdeas(f.id);
+    } else if (choice == 'keep') {
+      await repo.deleteFolderKeepIdeas(f.id);
+    }
   }
 
   // ─── ابزارهای کمکی ───────────────────────────────────────────────────────────
@@ -211,6 +244,63 @@ class _PlansScreenState extends ConsumerState<PlansScreen> {
           IconButton(
             icon: const Icon(Icons.check),
             onPressed: () => Navigator.pop(sheetCtx, ctrl.text),
+          ),
+        ]),
+      ),
+    );
+  }
+
+  Future<({String name, String? icon})?> _folderSheet(
+      BuildContext ctx, AppStrings s,
+      {String initialName = '', String? initialIcon}) {
+    final nameCtrl = TextEditingController(text: initialName);
+    final iconCtrl = TextEditingController(text: initialIcon ?? '');
+
+    void submit(BuildContext sheetCtx) {
+      final n = nameCtrl.text.trim();
+      if (n.isEmpty) {
+        Navigator.pop(sheetCtx);
+        return;
+      }
+      final ic = iconCtrl.text.trim();
+      Navigator.pop(sheetCtx, (name: n, icon: ic.isEmpty ? null : ic));
+    }
+
+    return showModalBottomSheet<({String name, String? icon})>(
+      context: ctx,
+      isScrollControlled: true,
+      builder: (sheetCtx) => Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(sheetCtx).viewInsets.bottom,
+          left: 16, right: 16, top: 16,
+        ),
+        child: Row(children: [
+          SizedBox(
+            width: 56,
+            child: TextField(
+              controller: iconCtrl,
+              textAlign: TextAlign.center,
+              maxLength: 2,
+              buildCounter: (_,
+                      {required int currentLength,
+                      required bool isFocused,
+                      int? maxLength}) =>
+                  null,
+              decoration: const InputDecoration(hintText: '📁'),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: TextField(
+              controller: nameCtrl,
+              autofocus: true,
+              decoration: InputDecoration(hintText: s.folderNameHint),
+              onSubmitted: (_) => submit(sheetCtx),
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.check),
+            onPressed: () => submit(sheetCtx),
           ),
         ]),
       ),
@@ -325,60 +415,58 @@ class _PlanTile extends ConsumerWidget {
   }
 }
 
-// ─── کارتِ ایده ─────────────────────────────────────────────────────────────────
+// ─── کارتِ پوشه ─────────────────────────────────────────────────────────────────
 
-class _IdeaTile extends StatelessWidget {
-  const _IdeaTile({
-    required this.idea,
+class _FolderTile extends StatelessWidget {
+  const _FolderTile({
+    required this.title,
+    required this.icon,
+    required this.count,
     required this.strings,
     required this.onOpen,
-    required this.onConvert,
-    required this.onSendToday,
-    required this.onDelete,
+    this.onEdit,
+    this.onDelete,
   });
-  final Task idea;
+  final String title;
+  final String icon;
+  final int count;
   final AppStrings strings;
   final VoidCallback onOpen;
-  final VoidCallback onConvert;
-  final VoidCallback onSendToday;
-  final VoidCallback onDelete;
+  final VoidCallback? onEdit;
+  final VoidCallback? onDelete;
 
   @override
   Widget build(BuildContext context) {
+    final hasMenu = onEdit != null || onDelete != null;
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 4),
       child: ListTile(
         onTap: onOpen,
-        leading: const Icon(Icons.lightbulb_outline),
-        title: Text(idea.title),
-        subtitle: idea.note == null || idea.note!.isEmpty
-            ? null
-            : Text(idea.note!, maxLines: 1, overflow: TextOverflow.ellipsis),
-        trailing: PopupMenuButton<String>(
-          onSelected: (v) {
-            if (v == 'convert') onConvert();
-            if (v == 'today') onSendToday();
-            if (v == 'delete') onDelete();
-          },
-          itemBuilder: (_) => [
-            PopupMenuItem(
-                value: 'convert',
-                child: Row(children: [
-                  const Icon(Icons.upgrade, size: 18),
-                  const SizedBox(width: 8),
-                  Text(strings.convertToPlan),
-                ])),
-            PopupMenuItem(
-                value: 'today',
-                child: Row(children: [
-                  const Icon(Icons.today_outlined, size: 18),
-                  const SizedBox(width: 8),
-                  Text(strings.sendToToday),
-                ])),
-            PopupMenuItem(
-                value: 'delete',
-                child: Text(strings.deleteLabel,
-                    style: const TextStyle(color: Colors.red))),
+        leading: Text(icon, style: const TextStyle(fontSize: 24)),
+        title:
+            Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
+        subtitle: Text(strings.ideaCount(count)),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (hasMenu)
+              PopupMenuButton<String>(
+                onSelected: (v) {
+                  if (v == 'edit') onEdit?.call();
+                  if (v == 'delete') onDelete?.call();
+                },
+                itemBuilder: (_) => [
+                  if (onEdit != null)
+                    PopupMenuItem(
+                        value: 'edit', child: Text(strings.editFolder)),
+                  if (onDelete != null)
+                    PopupMenuItem(
+                        value: 'delete',
+                        child: Text(strings.deleteLabel,
+                            style: const TextStyle(color: Colors.red))),
+                ],
+              ),
+            const Icon(Icons.chevron_right, color: Colors.grey),
           ],
         ),
       ),

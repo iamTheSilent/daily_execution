@@ -88,12 +88,13 @@ class IdeaRepository {
 
   Future<Task> getIdea(String id) => _db.getTaskById(id);
 
-  Future<void> addIdea(String title) async {
+  Future<void> addIdea(String title, {String? folderId}) async {
     final now = DateTime.now();
     await _db.upsertTask(TasksCompanion.insert(
       id: _uuid.v4(),
       title: title,
       bucket: TaskBucket.idea,
+      ideaFolderId: Value(folderId),
       orderKey: Value(now.millisecondsSinceEpoch.toDouble()),
       createdAt: now,
       updatedAt: now,
@@ -119,7 +120,14 @@ class IdeaRepository {
 
   Future<void> deleteIdea(String id) => _db.deleteTask(id);
 
-  /// ایده → برنامه: یه برنامه می‌سازه و خودِ ایده (با توضیحات/زمان) می‌شه اولین تسکِ داخلش
+  /// چرخشِ وضعیتِ ایده (انجام‌نشده ← در حال انجام ← انجام‌شده)
+  Future<void> cycleStatus(Task idea) {
+    final next = TaskStatus
+        .values[(idea.status.index + 1) % TaskStatus.values.length];
+    return _db.setStatus(idea.id, next);
+  }
+
+  /// ایده → برنامه: یه برنامهٔ تازه می‌سازه و خودِ ایده می‌شه اولین تسکِ داخلش
   Future<void> convertToPlan(Task idea) async {
     final now = DateTime.now();
     final planId = _uuid.v4();
@@ -135,22 +143,63 @@ class IdeaRepository {
       TasksCompanion(
         bucket: const Value(TaskBucket.plan),
         planId: Value(planId),
+        ideaFolderId: const Value(null),
         updatedAt: Value(now),
       ),
     );
   }
 
-  /// ایده → تسکِ یک روز (پیش‌فرض: امروز) با حفظِ توضیحات/زمان
+  /// ایده → افزودن به یک برنامهٔ موجود
+  Future<void> addToPlan(Task idea, String planId) {
+    return _db.updateTaskFields(
+      idea.id,
+      TasksCompanion(
+        bucket: const Value(TaskBucket.plan),
+        planId: Value(planId),
+        ideaFolderId: const Value(null),
+        updatedAt: Value(DateTime.now()),
+      ),
+    );
+  }
+
+  /// ایده → تسکِ یک روز (پیش‌فرض: امروز)
   Future<void> sendToDay(Task idea, DateTime day) {
     return _db.updateTaskFields(
       idea.id,
       TasksCompanion(
         bucket: const Value(TaskBucket.day),
         day: Value(DateTime(day.year, day.month, day.day)),
+        ideaFolderId: const Value(null),
         updatedAt: Value(DateTime.now()),
       ),
     );
   }
+
+  // ── پوشه‌ها ──────────────────────────────────────────────────────────────────
+
+  Stream<List<IdeaFolder>> watchFolders() => _db.watchIdeaFolders();
+
+  Future<void> createFolder(String name, String? icon) async {
+    final now = DateTime.now();
+    await _db.upsertIdeaFolder(IdeaFoldersCompanion.insert(
+      id: _uuid.v4(),
+      name: name,
+      icon: Value(icon),
+      orderKey: Value(now.millisecondsSinceEpoch.toDouble()),
+      createdAt: now,
+    ));
+  }
+
+  Future<void> renameFolder(String id, String name, String? icon) =>
+      _db.updateIdeaFolder(id, name: name, icon: icon);
+
+  Future<void> moveToFolder(String ideaId, String? folderId) =>
+      _db.moveIdeaToFolder(ideaId, folderId);
+
+  Future<void> deleteFolderAndIdeas(String id) => _db.deleteFolderAndIdeas(id);
+
+  Future<void> deleteFolderKeepIdeas(String id) =>
+      _db.deleteFolderKeepIdeas(id);
 }
 
 // ── پرووایدرها ─────────────────────────────────────────────────────────────────
@@ -188,6 +237,9 @@ final plansProvider = StreamProvider.autoDispose<List<Plan>>(
 
 final ideasProvider = StreamProvider.autoDispose<List<Task>>(
     (ref) => ref.watch(ideaRepositoryProvider).watchIdeas());
+
+final ideaFoldersProvider = StreamProvider.autoDispose<List<IdeaFolder>>(
+    (ref) => ref.watch(ideaRepositoryProvider).watchFolders());
 
 final planTasksProvider =
     StreamProvider.autoDispose.family<List<Task>, String>(

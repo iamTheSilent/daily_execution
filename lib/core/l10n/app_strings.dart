@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../date/app_date.dart';
 
 class AppStrings {
   const AppStrings(this.locale);
@@ -28,6 +29,33 @@ class AppStrings {
   String get sendToToday      => _fa ? 'ارسال به امروز'        : 'Send to Today';
   String get convertedMsg     => _fa ? 'به برنامه‌ها اضافه شد ✓' : 'Added to plans ✓';
   String get sentToTodayMsg   => _fa ? 'به امروز اضافه شد ✓'    : 'Added to today ✓';
+
+  // ── پوشه‌های ایده ─────────────────────────────────────────────────────────
+  String get newFolder        => _fa ? 'پوشهٔ جدید'        : 'New folder';
+  String get folderNameHint   => _fa ? 'نام پوشه…'         : 'Folder name…';
+  String get editFolder       => _fa ? 'ویرایش پوشه'       : 'Edit folder';
+  String get emptyFolders     => _fa ? 'هنوز پوشه‌ای نداری\nبا + یکی بساز' : 'No folders yet\nTap + to create one';
+  String get uncategorized    => _fa ? 'بدونِ پوشه'        : 'No folder';
+  String get emptyFolderIdeas => _fa ? 'این پوشه خالی است\nبا + ایده اضافه کن' : 'This folder is empty\nTap + to add an idea';
+  String ideaCount(int n)     => _fa ? '${toFaDigits('$n')} ایده' : '$n ideas';
+
+  // ── اکشن‌های ایده ─────────────────────────────────────────────────────────
+  String get convertToTask    => _fa ? 'تبدیل به کار'        : 'Convert to Task';
+  String get scheduleToDay    => _fa ? 'زمان‌بندی برای روز…' : 'Schedule to Day…';
+  String get addToPlan        => _fa ? 'افزودن به برنامه…'   : 'Add to Plan…';
+  String get moveToFolder     => _fa ? 'انتقال به پوشه…'     : 'Move to Folder…';
+  String get pickPlan         => _fa ? 'یک برنامه انتخاب کن' : 'Pick a plan';
+  String get pickFolder       => _fa ? 'یک پوشه انتخاب کن'   : 'Pick a folder';
+  String get noPlansToPick    => _fa ? 'هیچ برنامه‌ای نداری' : 'No plans yet';
+  String get scheduledMsg     => _fa ? 'زمان‌بندی شد ✓'      : 'Scheduled ✓';
+  String get addedToPlanMsg   => _fa ? 'به برنامه اضافه شد ✓' : 'Added to plan ✓';
+  String get movedMsg         => _fa ? 'منتقل شد ✓'          : 'Moved ✓';
+
+  // ── حذف پوشه ──────────────────────────────────────────────────────────────
+  String get deleteFolderQ    => _fa ? 'حذف پوشه؟'           : 'Delete folder?';
+  String get deleteFolderMsg  => _fa ? 'ایده‌های داخلِ این پوشه هم حذف شوند؟' : 'Delete the ideas inside too?';
+  String get deleteAllLabel   => _fa ? 'بله، همه حذف شوند'   : 'Yes, delete all';
+  String get keepIdeasLabel   => _fa ? 'نه، نگه‌دار'         : 'No, keep them';
 
   // ── صفحهٔ جزئیاتِ برنامه ───────────────────────────────────────────────────
   String get remainingLabel  => _fa ? 'باقی‌مانده'  : 'remaining';
