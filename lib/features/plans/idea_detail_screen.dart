@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/date/app_date.dart';
+import '../../core/date/wheel_picker.dart';
 import '../../data/database/database.dart';
 import '../../providers/app_providers.dart';
 
@@ -45,25 +46,17 @@ class _IdeaDetailScreenState extends ConsumerState<IdeaDetailScreen> {
     Navigator.pop(context);
   }
 
+  // پیکرِ چرخشی (اسکرولی) — خودش دکمهٔ «تأیید» و «لغو» داره
   Future<void> _pickTime() async {
-    final now = DateTime.now();
-    final date = await showDatePicker(
-      context: context,
-      initialDate: _scheduledAt ?? now,
-      firstDate: DateTime(now.year - 1),
-      lastDate: DateTime(now.year + 5),
+    final isFa = ref.read(localeProvider).languageCode == 'fa';
+    final picked = await showWheelDateTime(
+      context,
+      initial: _scheduledAt ?? DateTime.now(),
+      mode: ref.read(calendarModeProvider),
+      isFa: isFa,
     );
-    if (date == null || !mounted) return;
-    final time = await showTimePicker(
-      context: context,
-      initialTime: TimeOfDay.fromDateTime(_scheduledAt ?? now),
-    );
-    setState(() {
-      _scheduledAt = DateTime(
-        date.year, date.month, date.day,
-        time?.hour ?? 0, time?.minute ?? 0,
-      );
-    });
+    if (picked == null || !mounted) return;
+    setState(() => _scheduledAt = picked);
   }
 
   String _timeText(DateTime dt) {
