@@ -105,7 +105,7 @@ class _StatusRing extends StatelessWidget {
         height: 24,
         child: CircularProgressIndicator(
           strokeWidth: 3,
-          value: 0.75,
+          value: null, // چرخشی (بی‌نهایت) به‌جای ثابت
           color: AppColors.accent,
           backgroundColor: AppColors.progressTrack,
         ),

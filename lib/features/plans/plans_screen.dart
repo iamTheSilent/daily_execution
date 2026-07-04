@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../core/date/app_date.dart';
+import '../../core/date/wheel_picker.dart';
 import '../../core/l10n/app_strings.dart';
+import '../../core/theme/app_colors.dart';
 import '../../data/database/database.dart';
 import '../../data/database/tables.dart';
 import '../../providers/app_providers.dart';
-import 'idea_folder_screen.dart';
+import 'idea_detail_screen.dart';
 import 'plan_detail_screen.dart';
-
-const _accent = Color(0xFFFF9500);
 
 class PlansScreen extends ConsumerStatefulWidget {
   const PlansScreen({super.key});
@@ -30,8 +31,8 @@ class _PlansScreenState extends ConsumerState<PlansScreen> {
             style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
         leading: IconButton(
           icon: const Icon(Icons.add),
-          tooltip: _tab == 0 ? s.tabPlans : s.newFolder,
-          onPressed: _tab == 0 ? () => _addPlan(s) : () => _addFolder(s),
+          tooltip: _tab == 0 ? s.tabPlans : s.tabIdeas,
+          onPressed: _tab == 0 ? () => _addPlan(s) : () => _addIdea(s),
         ),
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(52),
@@ -85,7 +86,7 @@ class _PlansScreenState extends ConsumerState<PlansScreen> {
               MaterialPageRoute(
                   builder: (_) => PlanDetailScreen(plan: plans[i])),
             ),
-            onRename: () => _renamePlan(plans[i], s),
+            onRename: () => _editPlan(plans[i], s),
             onDelete: () => _deletePlan(plans[i], s),
           ),
         );
@@ -94,16 +95,18 @@ class _PlansScreenState extends ConsumerState<PlansScreen> {
   }
 
   Future<void> _addPlan(AppStrings s) async {
-    final name = await _inputSheet(context, hint: s.newPlanHint);
-    if (name == null || name.trim().isEmpty) return;
-    await ref.read(planRepositoryProvider).createPlan(name.trim());
+    final res = await _planSheet(context, s);
+    if (res == null) return;
+    await ref.read(planRepositoryProvider).createPlan(res.name, icon: res.icon);
   }
 
-  Future<void> _renamePlan(Plan plan, AppStrings s) async {
-    final name =
-        await _inputSheet(context, hint: s.newPlanHint, initial: plan.name);
-    if (name == null || name.trim().isEmpty) return;
-    await ref.read(planRepositoryProvider).renamePlan(plan.id, name.trim());
+  Future<void> _editPlan(Plan plan, AppStrings s) async {
+    final res = await _planSheet(context, s,
+        initialName: plan.name, initialIcon: plan.icon);
+    if (res == null) return;
+    await ref
+        .read(planRepositoryProvider)
+        .updatePlan(plan.id, name: res.name, icon: res.icon);
   }
 
   Future<void> _deletePlan(Plan plan, AppStrings s) async {
@@ -111,116 +114,205 @@ class _PlansScreenState extends ConsumerState<PlansScreen> {
     await ref.read(planRepositoryProvider).deletePlan(plan.id);
   }
 
-  // ─── تب ایده‌ها (لیستِ پوشه‌ها) ───────────────────────────────────────────────
+  // ─── تب ایده‌ها (لیستِ صاف) ───────────────────────────────────────────────────
 
   Widget _buildIdeasTab(AppStrings s) {
-    final foldersAsync = ref.watch(ideaFoldersProvider);
-    final ideasAsync = ref.watch(ideasProvider);
-
-    return foldersAsync.when(
+    final async = ref.watch(ideasProvider);
+    return async.when(
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (e, _) => Center(child: Text('$e')),
-      data: (folders) {
-        final ideas = ideasAsync.valueOrNull ?? const <Task>[];
-        final uncategorized =
-            ideas.where((t) => t.ideaFolderId == null).length;
-
-        if (folders.isEmpty && uncategorized == 0) {
+      data: (ideas) {
+        if (ideas.isEmpty) {
           return Center(
-            child: Text(s.emptyFolders,
+            child: Text(s.emptyIdeas,
                 textAlign: TextAlign.center,
                 style: const TextStyle(color: Colors.grey, height: 1.8)),
           );
         }
-
-        return ListView(
+        return ListView.builder(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          children: [
-            for (final f in folders)
-              _FolderTile(
-                title: f.name,
-                icon: f.icon ?? '📁',
-                count: ideas.where((t) => t.ideaFolderId == f.id).length,
-                strings: s,
-                onOpen: () => _openFolder(f),
-                onEdit: () => _editFolder(f, s),
-                onDelete: () => _deleteFolder(f, s),
-              ),
-            if (uncategorized > 0)
-              _FolderTile(
-                title: s.uncategorized,
-                icon: '🗂️',
-                count: uncategorized,
-                strings: s,
-                onOpen: () => _openFolder(null),
-              ),
-            const SizedBox(height: 8),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 4),
-              child: OutlinedButton.icon(
-                onPressed: () => _addFolder(s),
-                icon: const Icon(Icons.create_new_folder_outlined),
-                label: Text(s.newFolder),
-              ),
+          itemCount: ideas.length,
+          itemBuilder: (_, i) => _IdeaTile(
+            idea: ideas[i],
+            strings: s,
+            onOpen: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (_) => IdeaDetailScreen(idea: ideas[i])),
             ),
-          ],
+            onCycle: () =>
+                ref.read(ideaRepositoryProvider).cycleStatus(ideas[i]),
+            onActions: () => _ideaActions(ideas[i], s),
+          ),
         );
       },
     );
   }
 
-  void _openFolder(IdeaFolder? folder) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => IdeaFolderScreen(folder: folder)),
-    );
+  Future<void> _addIdea(AppStrings s) async {
+    final title = await _inputSheet(context, hint: s.newIdeaHint);
+    if (title == null || title.trim().isEmpty) return;
+    await ref.read(ideaRepositoryProvider).addIdea(title.trim());
   }
 
-  Future<void> _addFolder(AppStrings s) async {
-    final res = await _folderSheet(context, s);
-    if (res == null) return;
-    await ref.read(ideaRepositoryProvider).createFolder(res.name, res.icon);
-  }
+  // ─── شیتِ اکشن‌های ایده (۵ گزینه) ─────────────────────────────────────────────
 
-  Future<void> _editFolder(IdeaFolder f, AppStrings s) async {
-    final res = await _folderSheet(context, s,
-        initialName: f.name, initialIcon: f.icon);
-    if (res == null) return;
-    await ref
-        .read(ideaRepositoryProvider)
-        .renameFolder(f.id, res.name, res.icon);
-  }
-
-  Future<void> _deleteFolder(IdeaFolder f, AppStrings s) async {
-    final choice = await showDialog<String>(
+  void _ideaActions(Task idea, AppStrings s) {
+    showModalBottomSheet(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(s.deleteFolderQ),
-        content: Text(s.deleteFolderMsg),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: Text(s.cancelLabel)),
-          TextButton(
-              onPressed: () => Navigator.pop(ctx, 'keep'),
-              child: Text(s.keepIdeasLabel)),
-          TextButton(
-              onPressed: () => Navigator.pop(ctx, 'all'),
-              child: Text(s.deleteAllLabel,
-                  style: const TextStyle(color: Colors.red))),
-        ],
+      builder: (sheetCtx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.bolt, color: AppColors.accent),
+              title: Text(s.convertToPlan,
+                  style: const TextStyle(
+                      color: AppColors.accent, fontWeight: FontWeight.w600)),
+              onTap: () {
+                Navigator.pop(sheetCtx);
+                _ideaToNewPlan(idea, s);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.playlist_add),
+              title: Text(s.addToPlan),
+              onTap: () {
+                Navigator.pop(sheetCtx);
+                _ideaToExistingPlan(idea, s);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.today_outlined),
+              title: Text(s.sendToToday),
+              onTap: () {
+                Navigator.pop(sheetCtx);
+                _ideaToToday(idea, s);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.event_outlined),
+              title: Text(s.scheduleToDay),
+              onTap: () {
+                Navigator.pop(sheetCtx);
+                _ideaToSchedule(idea, s);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.delete_outline, color: Colors.red),
+              title: Text(s.deleteLabel,
+                  style: const TextStyle(color: Colors.red)),
+              onTap: () {
+                Navigator.pop(sheetCtx);
+                _deleteIdea(idea, s);
+              },
+            ),
+          ],
+        ),
       ),
     );
-    final repo = ref.read(ideaRepositoryProvider);
-    if (choice == 'all') {
-      await repo.deleteFolderAndIdeas(f.id);
-    } else if (choice == 'keep') {
-      await repo.deleteFolderKeepIdeas(f.id);
+  }
+
+  // ۱) تبدیل به برنامهٔ جدید (با اسم و ایموجی)
+  Future<void> _ideaToNewPlan(Task idea, AppStrings s) async {
+    final res = await _planSheet(context, s, initialName: idea.title);
+    if (res == null) return;
+    final messenger = ScaffoldMessenger.of(context);
+    await ref
+        .read(ideaRepositoryProvider)
+        .convertToPlan(idea, name: res.name, icon: res.icon);
+    messenger
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(
+          content: Text(s.convertedMsg),
+          duration: const Duration(milliseconds: 1500)));
+  }
+
+  // ۲) افزودن به یکی از برنامه‌های موجود (لیستِ اسکرولی)
+  Future<void> _ideaToExistingPlan(Task idea, AppStrings s) async {
+    final plans = ref.read(plansProvider).valueOrNull ?? const <Plan>[];
+    if (plans.isEmpty) {
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(
+            content: Text(s.noPlansToPick),
+            duration: const Duration(milliseconds: 1500)));
+      return;
     }
+    final picked = await showModalBottomSheet<Plan>(
+      context: context,
+      isScrollControlled: true,
+      builder: (sheetCtx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Text(s.pickPlan,
+                  style: const TextStyle(fontWeight: FontWeight.bold)),
+            ),
+            Flexible(
+              child: ListView.builder(
+                shrinkWrap: true,
+                itemCount: plans.length,
+                itemBuilder: (_, i) => ListTile(
+                  leading: Text(plans[i].icon ?? '📋',
+                      style: const TextStyle(fontSize: 22)),
+                  title: Text(plans[i].name),
+                  onTap: () => Navigator.pop(sheetCtx, plans[i]),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (picked == null) return;
+    final messenger = ScaffoldMessenger.of(context);
+    await ref.read(ideaRepositoryProvider).addToPlan(idea, picked.id);
+    messenger
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(
+          content: Text(s.addedToPlanMsg),
+          duration: const Duration(milliseconds: 1500)));
+  }
+
+  // ۳) کارِ امروز
+  Future<void> _ideaToToday(Task idea, AppStrings s) async {
+    final messenger = ScaffoldMessenger.of(context);
+    await ref.read(ideaRepositoryProvider).sendToDay(idea, DateTime.now());
+    messenger
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(
+          content: Text(s.sentToTodayMsg),
+          duration: const Duration(milliseconds: 1500)));
+  }
+
+  // ۴) تایمِ دیگه (اسکرولی)
+  Future<void> _ideaToSchedule(Task idea, AppStrings s) async {
+    final mode = ref.read(calendarModeProvider);
+    final isFa = ref.read(localeProvider).languageCode == 'fa';
+    final picked = await showWheelDateTime(context,
+        initial: idea.dueDate ?? DateTime.now(), mode: mode, isFa: isFa);
+    if (picked == null) return;
+    final messenger = ScaffoldMessenger.of(context);
+    await ref.read(ideaRepositoryProvider).sendToDay(idea, picked);
+    messenger
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(
+          content: Text(s.scheduledMsg),
+          duration: const Duration(milliseconds: 1500)));
+  }
+
+  // ۵) حذف
+  Future<void> _deleteIdea(Task idea, AppStrings s) async {
+    if (!await _confirmDelete(s)) return;
+    await ref.read(ideaRepositoryProvider).deleteIdea(idea.id);
   }
 
   // ─── ابزارهای کمکی ───────────────────────────────────────────────────────────
 
+  // شیتِ ساده برای افزودن/ویرایشِ ایده (فقط متن)
   Future<String?> _inputSheet(BuildContext ctx,
       {required String hint, String initial = ''}) {
     final ctrl = TextEditingController(text: initial);
@@ -250,7 +342,8 @@ class _PlansScreenState extends ConsumerState<PlansScreen> {
     );
   }
 
-  Future<({String name, String? icon})?> _folderSheet(
+  // شیتِ برنامه (ایموجی + اسم)
+  Future<({String name, String? icon})?> _planSheet(
       BuildContext ctx, AppStrings s,
       {String initialName = '', String? initialIcon}) {
     final nameCtrl = TextEditingController(text: initialName);
@@ -286,7 +379,7 @@ class _PlansScreenState extends ConsumerState<PlansScreen> {
                       required bool isFocused,
                       int? maxLength}) =>
                   null,
-              decoration: const InputDecoration(hintText: '📁'),
+              decoration: const InputDecoration(hintText: '📋'),
             ),
           ),
           const SizedBox(width: 8),
@@ -294,7 +387,7 @@ class _PlansScreenState extends ConsumerState<PlansScreen> {
             child: TextField(
               controller: nameCtrl,
               autofocus: true,
-              decoration: InputDecoration(hintText: s.folderNameHint),
+              decoration: InputDecoration(hintText: s.newPlanHint),
               onSubmitted: (_) => submit(sheetCtx),
             ),
           ),
@@ -327,7 +420,7 @@ class _PlansScreenState extends ConsumerState<PlansScreen> {
       false;
 }
 
-// ─── کارتِ برنامه (درشت + پراگرس‌بار) ───────────────────────────────────────────
+// ─── کارتِ برنامه (درشت + پراگرس‌بار + ایموجی) ──────────────────────────────────
 
 class _PlanTile extends ConsumerWidget {
   const _PlanTile({
@@ -364,7 +457,7 @@ class _PlanTile extends ConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(children: [
-                const Icon(Icons.folder_outlined),
+                Text(plan.icon ?? '📋', style: const TextStyle(fontSize: 22)),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(plan.name,
@@ -390,7 +483,7 @@ class _PlanTile extends ConsumerWidget {
               Row(children: [
                 Text('$remaining ${strings.remainingLabel}',
                     style: const TextStyle(
-                        color: _accent,
+                        color: AppColors.accent,
                         fontWeight: FontWeight.bold,
                         fontSize: 13)),
                 const SizedBox(width: 10),
@@ -404,7 +497,7 @@ class _PlanTile extends ConsumerWidget {
                   value: progress,
                   minHeight: 8,
                   backgroundColor: Colors.grey.withOpacity(0.2),
-                  valueColor: const AlwaysStoppedAnimation(_accent),
+                  valueColor: const AlwaysStoppedAnimation(AppColors.accent),
                 ),
               ),
             ],
@@ -415,61 +508,66 @@ class _PlanTile extends ConsumerWidget {
   }
 }
 
-// ─── کارتِ پوشه ─────────────────────────────────────────────────────────────────
+// ─── ردیفِ ایده ──────────────────────────────────────────────────────────────
 
-class _FolderTile extends StatelessWidget {
-  const _FolderTile({
-    required this.title,
-    required this.icon,
-    required this.count,
+class _IdeaTile extends StatelessWidget {
+  const _IdeaTile({
+    required this.idea,
     required this.strings,
     required this.onOpen,
-    this.onEdit,
-    this.onDelete,
+    required this.onCycle,
+    required this.onActions,
   });
-  final String title;
-  final String icon;
-  final int count;
+  final Task idea;
   final AppStrings strings;
   final VoidCallback onOpen;
-  final VoidCallback? onEdit;
-  final VoidCallback? onDelete;
+  final VoidCallback onCycle;
+  final VoidCallback onActions;
 
   @override
   Widget build(BuildContext context) {
-    final hasMenu = onEdit != null || onDelete != null;
+    final isDone = idea.status == TaskStatus.done;
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 4),
       child: ListTile(
         onTap: onOpen,
-        leading: Text(icon, style: const TextStyle(fontSize: 24)),
-        title:
-            Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
-        subtitle: Text(strings.ideaCount(count)),
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (hasMenu)
-              PopupMenuButton<String>(
-                onSelected: (v) {
-                  if (v == 'edit') onEdit?.call();
-                  if (v == 'delete') onDelete?.call();
-                },
-                itemBuilder: (_) => [
-                  if (onEdit != null)
-                    PopupMenuItem(
-                        value: 'edit', child: Text(strings.editFolder)),
-                  if (onDelete != null)
-                    PopupMenuItem(
-                        value: 'delete',
-                        child: Text(strings.deleteLabel,
-                            style: const TextStyle(color: Colors.red))),
-                ],
-              ),
-            const Icon(Icons.chevron_right, color: Colors.grey),
-          ],
+        leading: GestureDetector(
+          onTap: onCycle,
+          child: _StatusCircle(status: idea.status),
+        ),
+        title: Text(
+          idea.title,
+          style: TextStyle(
+            decoration: isDone ? TextDecoration.lineThrough : null,
+            color: isDone ? AppColors.textSecondary : null,
+          ),
+        ),
+        subtitle: (idea.note == null || idea.note!.isEmpty)
+            ? null
+            : Text(idea.note!, maxLines: 1, overflow: TextOverflow.ellipsis),
+        trailing: IconButton(
+          icon: const Icon(Icons.more_horiz),
+          onPressed: onActions,
         ),
       ),
     );
+  }
+}
+
+class _StatusCircle extends StatelessWidget {
+  const _StatusCircle({required this.status});
+  final TaskStatus status;
+
+  @override
+  Widget build(BuildContext context) {
+    switch (status) {
+      case TaskStatus.done:
+        return const Icon(Icons.check_circle, color: AppColors.green);
+      case TaskStatus.doing:
+        return const Icon(Icons.radio_button_checked, color: AppColors.accent);
+      case TaskStatus.todo:
+        return const Icon(Icons.radio_button_unchecked,
+            color: AppColors.textSecondary);
+    }
   }
 }

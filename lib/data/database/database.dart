@@ -9,7 +9,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(openConnection());
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -22,10 +22,13 @@ class AppDatabase extends _$AppDatabase {
             await m.addColumn(tasks, tasks.ideaFolderId);
             await m.addColumn(ideaFolders, ideaFolders.icon);
           }
+          if (from < 4) {
+            await m.addColumn(plans, plans.icon);
+          }
         },
       );
 
-  // ─── Tasks (شاملِ ایده‌ها) ───────────────────────────────────────────────────
+  // ─── Tasks (شاملِ ایده‌ها) ───
   Stream<List<Task>> watchDayTasks(DateTime day) {
     final start = DateTime(day.year, day.month, day.day);
     final end = start.add(const Duration(days: 1));
@@ -81,7 +84,35 @@ class AppDatabase extends _$AppDatabase {
         ),
       );
 
-  // ─── Idea Folders (پوشه‌های ایده) ─────────────────────────────────────────────
+  // ─── Plans ───
+  Stream<List<Plan>> watchPlans() =>
+      (select(plans)..orderBy([(p) => OrderingTerm.asc(p.orderKey)])).watch();
+
+  Future<void> upsertPlan(PlansCompanion p) =>
+      into(plans).insertOnConflictUpdate(p);
+
+  Future<void> deletePlan(String id) =>
+      (delete(plans)..where((p) => p.id.equals(id))).go();
+
+  Future<void> renamePlan(String id, String newName) =>
+      (update(plans)..where((p) => p.id.equals(id))).write(
+        PlansCompanion(
+          name: Value(newName),
+          updatedAt: Value(DateTime.now()),
+        ),
+      );
+
+  /// به‌روزرسانیِ نام + ایموجیِ برنامه
+  Future<void> updatePlan(String id, {required String name, String? icon}) =>
+      (update(plans)..where((p) => p.id.equals(id))).write(
+        PlansCompanion(
+          name: Value(name),
+          icon: Value(icon),
+          updatedAt: Value(DateTime.now()),
+        ),
+      );
+
+  // ─── Idea Folders (دیگر در UI استفاده نمی‌شود؛ برای سازگاری نگه داشته شده) ───
   Stream<List<IdeaFolder>> watchIdeaFolders() =>
       (select(ideaFolders)..orderBy([(f) => OrderingTerm.asc(f.orderKey)]))
           .watch();
@@ -95,7 +126,6 @@ class AppDatabase extends _$AppDatabase {
         IdeaFoldersCompanion(name: Value(name), icon: Value(icon)),
       );
 
-  /// ایده‌های داخلِ یک پوشه (folderId=null یعنی «بدونِ پوشه»)
   Stream<List<Task>> watchIdeasInFolder(String? folderId) {
     return (select(tasks)
           ..where((t) =>
@@ -115,7 +145,6 @@ class AppDatabase extends _$AppDatabase {
         ),
       );
 
-  /// حذفِ پوشه + حذفِ همهٔ ایده‌های داخلش
   Future<void> deleteFolderAndIdeas(String folderId) async {
     await (delete(tasks)
           ..where((t) =>
@@ -125,7 +154,6 @@ class AppDatabase extends _$AppDatabase {
     await (delete(ideaFolders)..where((f) => f.id.equals(folderId))).go();
   }
 
-  /// حذفِ پوشه ولی ایده‌هاش می‌رن به «بدونِ پوشه»
   Future<void> deleteFolderKeepIdeas(String folderId) async {
     await (update(tasks)
           ..where((t) =>
@@ -137,22 +165,4 @@ class AppDatabase extends _$AppDatabase {
     ));
     await (delete(ideaFolders)..where((f) => f.id.equals(folderId))).go();
   }
-
-  // ─── Plans ───────────────────────────────────────────────────────────────────
-  Stream<List<Plan>> watchPlans() =>
-      (select(plans)..orderBy([(p) => OrderingTerm.asc(p.orderKey)])).watch();
-
-  Future<void> upsertPlan(PlansCompanion p) =>
-      into(plans).insertOnConflictUpdate(p);
-
-  Future<void> deletePlan(String id) =>
-      (delete(plans)..where((p) => p.id.equals(id))).go();
-
-  Future<void> renamePlan(String id, String newName) =>
-      (update(plans)..where((p) => p.id.equals(id))).write(
-        PlansCompanion(
-          name: Value(newName),
-          updatedAt: Value(DateTime.now()),
-        ),
-      );
 }

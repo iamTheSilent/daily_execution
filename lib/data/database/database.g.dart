@@ -734,6 +734,11 @@ class $PlansTable extends Plans with TableInfo<$PlansTable, Plan> {
   late final GeneratedColumn<String> name = GeneratedColumn<String>(
       'name', aliasedName, false,
       type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _iconMeta = const VerificationMeta('icon');
+  @override
+  late final GeneratedColumn<String> icon = GeneratedColumn<String>(
+      'icon', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
   static const VerificationMeta _startDateMeta =
       const VerificationMeta('startDate');
   @override
@@ -768,7 +773,7 @@ class $PlansTable extends Plans with TableInfo<$PlansTable, Plan> {
       type: DriftSqlType.dateTime, requiredDuringInsert: true);
   @override
   List<GeneratedColumn> get $columns =>
-      [id, name, startDate, endDate, orderKey, createdAt, updatedAt];
+      [id, name, icon, startDate, endDate, orderKey, createdAt, updatedAt];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -789,6 +794,10 @@ class $PlansTable extends Plans with TableInfo<$PlansTable, Plan> {
           _nameMeta, name.isAcceptableOrUnknown(data['name']!, _nameMeta));
     } else if (isInserting) {
       context.missing(_nameMeta);
+    }
+    if (data.containsKey('icon')) {
+      context.handle(
+          _iconMeta, icon.isAcceptableOrUnknown(data['icon']!, _iconMeta));
     }
     if (data.containsKey('start_date')) {
       context.handle(_startDateMeta,
@@ -827,6 +836,8 @@ class $PlansTable extends Plans with TableInfo<$PlansTable, Plan> {
           .read(DriftSqlType.string, data['${effectivePrefix}id'])!,
       name: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}name'])!,
+      icon: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}icon']),
       startDate: attachedDatabase.typeMapping
           .read(DriftSqlType.dateTime, data['${effectivePrefix}start_date']),
       endDate: attachedDatabase.typeMapping
@@ -849,6 +860,7 @@ class $PlansTable extends Plans with TableInfo<$PlansTable, Plan> {
 class Plan extends DataClass implements Insertable<Plan> {
   final String id;
   final String name;
+  final String? icon;
   final DateTime? startDate;
   final DateTime? endDate;
   final double orderKey;
@@ -857,6 +869,7 @@ class Plan extends DataClass implements Insertable<Plan> {
   const Plan(
       {required this.id,
       required this.name,
+      this.icon,
       this.startDate,
       this.endDate,
       required this.orderKey,
@@ -867,6 +880,9 @@ class Plan extends DataClass implements Insertable<Plan> {
     final map = <String, Expression>{};
     map['id'] = Variable<String>(id);
     map['name'] = Variable<String>(name);
+    if (!nullToAbsent || icon != null) {
+      map['icon'] = Variable<String>(icon);
+    }
     if (!nullToAbsent || startDate != null) {
       map['start_date'] = Variable<DateTime>(startDate);
     }
@@ -883,6 +899,7 @@ class Plan extends DataClass implements Insertable<Plan> {
     return PlansCompanion(
       id: Value(id),
       name: Value(name),
+      icon: icon == null && nullToAbsent ? const Value.absent() : Value(icon),
       startDate: startDate == null && nullToAbsent
           ? const Value.absent()
           : Value(startDate),
@@ -901,6 +918,7 @@ class Plan extends DataClass implements Insertable<Plan> {
     return Plan(
       id: serializer.fromJson<String>(json['id']),
       name: serializer.fromJson<String>(json['name']),
+      icon: serializer.fromJson<String?>(json['icon']),
       startDate: serializer.fromJson<DateTime?>(json['startDate']),
       endDate: serializer.fromJson<DateTime?>(json['endDate']),
       orderKey: serializer.fromJson<double>(json['orderKey']),
@@ -914,6 +932,7 @@ class Plan extends DataClass implements Insertable<Plan> {
     return <String, dynamic>{
       'id': serializer.toJson<String>(id),
       'name': serializer.toJson<String>(name),
+      'icon': serializer.toJson<String?>(icon),
       'startDate': serializer.toJson<DateTime?>(startDate),
       'endDate': serializer.toJson<DateTime?>(endDate),
       'orderKey': serializer.toJson<double>(orderKey),
@@ -925,6 +944,7 @@ class Plan extends DataClass implements Insertable<Plan> {
   Plan copyWith(
           {String? id,
           String? name,
+          Value<String?> icon = const Value.absent(),
           Value<DateTime?> startDate = const Value.absent(),
           Value<DateTime?> endDate = const Value.absent(),
           double? orderKey,
@@ -933,6 +953,7 @@ class Plan extends DataClass implements Insertable<Plan> {
       Plan(
         id: id ?? this.id,
         name: name ?? this.name,
+        icon: icon.present ? icon.value : this.icon,
         startDate: startDate.present ? startDate.value : this.startDate,
         endDate: endDate.present ? endDate.value : this.endDate,
         orderKey: orderKey ?? this.orderKey,
@@ -943,6 +964,7 @@ class Plan extends DataClass implements Insertable<Plan> {
     return Plan(
       id: data.id.present ? data.id.value : this.id,
       name: data.name.present ? data.name.value : this.name,
+      icon: data.icon.present ? data.icon.value : this.icon,
       startDate: data.startDate.present ? data.startDate.value : this.startDate,
       endDate: data.endDate.present ? data.endDate.value : this.endDate,
       orderKey: data.orderKey.present ? data.orderKey.value : this.orderKey,
@@ -956,6 +978,7 @@ class Plan extends DataClass implements Insertable<Plan> {
     return (StringBuffer('Plan(')
           ..write('id: $id, ')
           ..write('name: $name, ')
+          ..write('icon: $icon, ')
           ..write('startDate: $startDate, ')
           ..write('endDate: $endDate, ')
           ..write('orderKey: $orderKey, ')
@@ -966,14 +989,15 @@ class Plan extends DataClass implements Insertable<Plan> {
   }
 
   @override
-  int get hashCode =>
-      Object.hash(id, name, startDate, endDate, orderKey, createdAt, updatedAt);
+  int get hashCode => Object.hash(
+      id, name, icon, startDate, endDate, orderKey, createdAt, updatedAt);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is Plan &&
           other.id == this.id &&
           other.name == this.name &&
+          other.icon == this.icon &&
           other.startDate == this.startDate &&
           other.endDate == this.endDate &&
           other.orderKey == this.orderKey &&
@@ -984,6 +1008,7 @@ class Plan extends DataClass implements Insertable<Plan> {
 class PlansCompanion extends UpdateCompanion<Plan> {
   final Value<String> id;
   final Value<String> name;
+  final Value<String?> icon;
   final Value<DateTime?> startDate;
   final Value<DateTime?> endDate;
   final Value<double> orderKey;
@@ -993,6 +1018,7 @@ class PlansCompanion extends UpdateCompanion<Plan> {
   const PlansCompanion({
     this.id = const Value.absent(),
     this.name = const Value.absent(),
+    this.icon = const Value.absent(),
     this.startDate = const Value.absent(),
     this.endDate = const Value.absent(),
     this.orderKey = const Value.absent(),
@@ -1003,6 +1029,7 @@ class PlansCompanion extends UpdateCompanion<Plan> {
   PlansCompanion.insert({
     required String id,
     required String name,
+    this.icon = const Value.absent(),
     this.startDate = const Value.absent(),
     this.endDate = const Value.absent(),
     this.orderKey = const Value.absent(),
@@ -1016,6 +1043,7 @@ class PlansCompanion extends UpdateCompanion<Plan> {
   static Insertable<Plan> custom({
     Expression<String>? id,
     Expression<String>? name,
+    Expression<String>? icon,
     Expression<DateTime>? startDate,
     Expression<DateTime>? endDate,
     Expression<double>? orderKey,
@@ -1026,6 +1054,7 @@ class PlansCompanion extends UpdateCompanion<Plan> {
     return RawValuesInsertable({
       if (id != null) 'id': id,
       if (name != null) 'name': name,
+      if (icon != null) 'icon': icon,
       if (startDate != null) 'start_date': startDate,
       if (endDate != null) 'end_date': endDate,
       if (orderKey != null) 'order_key': orderKey,
@@ -1038,6 +1067,7 @@ class PlansCompanion extends UpdateCompanion<Plan> {
   PlansCompanion copyWith(
       {Value<String>? id,
       Value<String>? name,
+      Value<String?>? icon,
       Value<DateTime?>? startDate,
       Value<DateTime?>? endDate,
       Value<double>? orderKey,
@@ -1047,6 +1077,7 @@ class PlansCompanion extends UpdateCompanion<Plan> {
     return PlansCompanion(
       id: id ?? this.id,
       name: name ?? this.name,
+      icon: icon ?? this.icon,
       startDate: startDate ?? this.startDate,
       endDate: endDate ?? this.endDate,
       orderKey: orderKey ?? this.orderKey,
@@ -1064,6 +1095,9 @@ class PlansCompanion extends UpdateCompanion<Plan> {
     }
     if (name.present) {
       map['name'] = Variable<String>(name.value);
+    }
+    if (icon.present) {
+      map['icon'] = Variable<String>(icon.value);
     }
     if (startDate.present) {
       map['start_date'] = Variable<DateTime>(startDate.value);
@@ -1091,6 +1125,7 @@ class PlansCompanion extends UpdateCompanion<Plan> {
     return (StringBuffer('PlansCompanion(')
           ..write('id: $id, ')
           ..write('name: $name, ')
+          ..write('icon: $icon, ')
           ..write('startDate: $startDate, ')
           ..write('endDate: $endDate, ')
           ..write('orderKey: $orderKey, ')
@@ -2135,6 +2170,7 @@ class $$TasksTableOrderingComposer
 typedef $$PlansTableCreateCompanionBuilder = PlansCompanion Function({
   required String id,
   required String name,
+  Value<String?> icon,
   Value<DateTime?> startDate,
   Value<DateTime?> endDate,
   Value<double> orderKey,
@@ -2145,6 +2181,7 @@ typedef $$PlansTableCreateCompanionBuilder = PlansCompanion Function({
 typedef $$PlansTableUpdateCompanionBuilder = PlansCompanion Function({
   Value<String> id,
   Value<String> name,
+  Value<String?> icon,
   Value<DateTime?> startDate,
   Value<DateTime?> endDate,
   Value<double> orderKey,
@@ -2172,6 +2209,7 @@ class $$PlansTableTableManager extends RootTableManager<
           updateCompanionCallback: ({
             Value<String> id = const Value.absent(),
             Value<String> name = const Value.absent(),
+            Value<String?> icon = const Value.absent(),
             Value<DateTime?> startDate = const Value.absent(),
             Value<DateTime?> endDate = const Value.absent(),
             Value<double> orderKey = const Value.absent(),
@@ -2182,6 +2220,7 @@ class $$PlansTableTableManager extends RootTableManager<
               PlansCompanion(
             id: id,
             name: name,
+            icon: icon,
             startDate: startDate,
             endDate: endDate,
             orderKey: orderKey,
@@ -2192,6 +2231,7 @@ class $$PlansTableTableManager extends RootTableManager<
           createCompanionCallback: ({
             required String id,
             required String name,
+            Value<String?> icon = const Value.absent(),
             Value<DateTime?> startDate = const Value.absent(),
             Value<DateTime?> endDate = const Value.absent(),
             Value<double> orderKey = const Value.absent(),
@@ -2202,6 +2242,7 @@ class $$PlansTableTableManager extends RootTableManager<
               PlansCompanion.insert(
             id: id,
             name: name,
+            icon: icon,
             startDate: startDate,
             endDate: endDate,
             orderKey: orderKey,
@@ -2222,6 +2263,11 @@ class $$PlansTableFilterComposer
 
   ColumnFilters<String> get name => $state.composableBuilder(
       column: $state.table.name,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<String> get icon => $state.composableBuilder(
+      column: $state.table.icon,
       builder: (column, joinBuilders) =>
           ColumnFilters(column, joinBuilders: joinBuilders));
 
@@ -2261,6 +2307,11 @@ class $$PlansTableOrderingComposer
 
   ColumnOrderings<String> get name => $state.composableBuilder(
       column: $state.table.name,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<String> get icon => $state.composableBuilder(
+      column: $state.table.icon,
       builder: (column, joinBuilders) =>
           ColumnOrderings(column, joinBuilders: joinBuilders));
 
