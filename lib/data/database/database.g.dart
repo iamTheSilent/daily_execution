@@ -751,6 +751,25 @@ class $PlansTable extends Plans with TableInfo<$PlansTable, Plan> {
   late final GeneratedColumn<DateTime> endDate = GeneratedColumn<DateTime>(
       'end_date', aliasedName, true,
       type: DriftSqlType.dateTime, requiredDuringInsert: false);
+  static const VerificationMeta _pinnedMeta = const VerificationMeta('pinned');
+  @override
+  late final GeneratedColumn<bool> pinned = GeneratedColumn<bool>(
+      'pinned', aliasedName, false,
+      type: DriftSqlType.bool,
+      requiredDuringInsert: false,
+      defaultConstraints:
+          GeneratedColumn.constraintIsAlways('CHECK ("pinned" IN (0, 1))'),
+      defaultValue: const Constant(false));
+  static const VerificationMeta _archivedMeta =
+      const VerificationMeta('archived');
+  @override
+  late final GeneratedColumn<bool> archived = GeneratedColumn<bool>(
+      'archived', aliasedName, false,
+      type: DriftSqlType.bool,
+      requiredDuringInsert: false,
+      defaultConstraints:
+          GeneratedColumn.constraintIsAlways('CHECK ("archived" IN (0, 1))'),
+      defaultValue: const Constant(false));
   static const VerificationMeta _orderKeyMeta =
       const VerificationMeta('orderKey');
   @override
@@ -772,8 +791,18 @@ class $PlansTable extends Plans with TableInfo<$PlansTable, Plan> {
       'updated_at', aliasedName, false,
       type: DriftSqlType.dateTime, requiredDuringInsert: true);
   @override
-  List<GeneratedColumn> get $columns =>
-      [id, name, icon, startDate, endDate, orderKey, createdAt, updatedAt];
+  List<GeneratedColumn> get $columns => [
+        id,
+        name,
+        icon,
+        startDate,
+        endDate,
+        pinned,
+        archived,
+        orderKey,
+        createdAt,
+        updatedAt
+      ];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -806,6 +835,14 @@ class $PlansTable extends Plans with TableInfo<$PlansTable, Plan> {
     if (data.containsKey('end_date')) {
       context.handle(_endDateMeta,
           endDate.isAcceptableOrUnknown(data['end_date']!, _endDateMeta));
+    }
+    if (data.containsKey('pinned')) {
+      context.handle(_pinnedMeta,
+          pinned.isAcceptableOrUnknown(data['pinned']!, _pinnedMeta));
+    }
+    if (data.containsKey('archived')) {
+      context.handle(_archivedMeta,
+          archived.isAcceptableOrUnknown(data['archived']!, _archivedMeta));
     }
     if (data.containsKey('order_key')) {
       context.handle(_orderKeyMeta,
@@ -842,6 +879,10 @@ class $PlansTable extends Plans with TableInfo<$PlansTable, Plan> {
           .read(DriftSqlType.dateTime, data['${effectivePrefix}start_date']),
       endDate: attachedDatabase.typeMapping
           .read(DriftSqlType.dateTime, data['${effectivePrefix}end_date']),
+      pinned: attachedDatabase.typeMapping
+          .read(DriftSqlType.bool, data['${effectivePrefix}pinned'])!,
+      archived: attachedDatabase.typeMapping
+          .read(DriftSqlType.bool, data['${effectivePrefix}archived'])!,
       orderKey: attachedDatabase.typeMapping
           .read(DriftSqlType.double, data['${effectivePrefix}order_key'])!,
       createdAt: attachedDatabase.typeMapping
@@ -863,6 +904,8 @@ class Plan extends DataClass implements Insertable<Plan> {
   final String? icon;
   final DateTime? startDate;
   final DateTime? endDate;
+  final bool pinned;
+  final bool archived;
   final double orderKey;
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -872,6 +915,8 @@ class Plan extends DataClass implements Insertable<Plan> {
       this.icon,
       this.startDate,
       this.endDate,
+      required this.pinned,
+      required this.archived,
       required this.orderKey,
       required this.createdAt,
       required this.updatedAt});
@@ -889,6 +934,8 @@ class Plan extends DataClass implements Insertable<Plan> {
     if (!nullToAbsent || endDate != null) {
       map['end_date'] = Variable<DateTime>(endDate);
     }
+    map['pinned'] = Variable<bool>(pinned);
+    map['archived'] = Variable<bool>(archived);
     map['order_key'] = Variable<double>(orderKey);
     map['created_at'] = Variable<DateTime>(createdAt);
     map['updated_at'] = Variable<DateTime>(updatedAt);
@@ -906,6 +953,8 @@ class Plan extends DataClass implements Insertable<Plan> {
       endDate: endDate == null && nullToAbsent
           ? const Value.absent()
           : Value(endDate),
+      pinned: Value(pinned),
+      archived: Value(archived),
       orderKey: Value(orderKey),
       createdAt: Value(createdAt),
       updatedAt: Value(updatedAt),
@@ -921,6 +970,8 @@ class Plan extends DataClass implements Insertable<Plan> {
       icon: serializer.fromJson<String?>(json['icon']),
       startDate: serializer.fromJson<DateTime?>(json['startDate']),
       endDate: serializer.fromJson<DateTime?>(json['endDate']),
+      pinned: serializer.fromJson<bool>(json['pinned']),
+      archived: serializer.fromJson<bool>(json['archived']),
       orderKey: serializer.fromJson<double>(json['orderKey']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
@@ -935,6 +986,8 @@ class Plan extends DataClass implements Insertable<Plan> {
       'icon': serializer.toJson<String?>(icon),
       'startDate': serializer.toJson<DateTime?>(startDate),
       'endDate': serializer.toJson<DateTime?>(endDate),
+      'pinned': serializer.toJson<bool>(pinned),
+      'archived': serializer.toJson<bool>(archived),
       'orderKey': serializer.toJson<double>(orderKey),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
@@ -947,6 +1000,8 @@ class Plan extends DataClass implements Insertable<Plan> {
           Value<String?> icon = const Value.absent(),
           Value<DateTime?> startDate = const Value.absent(),
           Value<DateTime?> endDate = const Value.absent(),
+          bool? pinned,
+          bool? archived,
           double? orderKey,
           DateTime? createdAt,
           DateTime? updatedAt}) =>
@@ -956,6 +1011,8 @@ class Plan extends DataClass implements Insertable<Plan> {
         icon: icon.present ? icon.value : this.icon,
         startDate: startDate.present ? startDate.value : this.startDate,
         endDate: endDate.present ? endDate.value : this.endDate,
+        pinned: pinned ?? this.pinned,
+        archived: archived ?? this.archived,
         orderKey: orderKey ?? this.orderKey,
         createdAt: createdAt ?? this.createdAt,
         updatedAt: updatedAt ?? this.updatedAt,
@@ -967,6 +1024,8 @@ class Plan extends DataClass implements Insertable<Plan> {
       icon: data.icon.present ? data.icon.value : this.icon,
       startDate: data.startDate.present ? data.startDate.value : this.startDate,
       endDate: data.endDate.present ? data.endDate.value : this.endDate,
+      pinned: data.pinned.present ? data.pinned.value : this.pinned,
+      archived: data.archived.present ? data.archived.value : this.archived,
       orderKey: data.orderKey.present ? data.orderKey.value : this.orderKey,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
@@ -981,6 +1040,8 @@ class Plan extends DataClass implements Insertable<Plan> {
           ..write('icon: $icon, ')
           ..write('startDate: $startDate, ')
           ..write('endDate: $endDate, ')
+          ..write('pinned: $pinned, ')
+          ..write('archived: $archived, ')
           ..write('orderKey: $orderKey, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt')
@@ -989,8 +1050,8 @@ class Plan extends DataClass implements Insertable<Plan> {
   }
 
   @override
-  int get hashCode => Object.hash(
-      id, name, icon, startDate, endDate, orderKey, createdAt, updatedAt);
+  int get hashCode => Object.hash(id, name, icon, startDate, endDate, pinned,
+      archived, orderKey, createdAt, updatedAt);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -1000,6 +1061,8 @@ class Plan extends DataClass implements Insertable<Plan> {
           other.icon == this.icon &&
           other.startDate == this.startDate &&
           other.endDate == this.endDate &&
+          other.pinned == this.pinned &&
+          other.archived == this.archived &&
           other.orderKey == this.orderKey &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt);
@@ -1011,6 +1074,8 @@ class PlansCompanion extends UpdateCompanion<Plan> {
   final Value<String?> icon;
   final Value<DateTime?> startDate;
   final Value<DateTime?> endDate;
+  final Value<bool> pinned;
+  final Value<bool> archived;
   final Value<double> orderKey;
   final Value<DateTime> createdAt;
   final Value<DateTime> updatedAt;
@@ -1021,6 +1086,8 @@ class PlansCompanion extends UpdateCompanion<Plan> {
     this.icon = const Value.absent(),
     this.startDate = const Value.absent(),
     this.endDate = const Value.absent(),
+    this.pinned = const Value.absent(),
+    this.archived = const Value.absent(),
     this.orderKey = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
@@ -1032,6 +1099,8 @@ class PlansCompanion extends UpdateCompanion<Plan> {
     this.icon = const Value.absent(),
     this.startDate = const Value.absent(),
     this.endDate = const Value.absent(),
+    this.pinned = const Value.absent(),
+    this.archived = const Value.absent(),
     this.orderKey = const Value.absent(),
     required DateTime createdAt,
     required DateTime updatedAt,
@@ -1046,6 +1115,8 @@ class PlansCompanion extends UpdateCompanion<Plan> {
     Expression<String>? icon,
     Expression<DateTime>? startDate,
     Expression<DateTime>? endDate,
+    Expression<bool>? pinned,
+    Expression<bool>? archived,
     Expression<double>? orderKey,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? updatedAt,
@@ -1057,6 +1128,8 @@ class PlansCompanion extends UpdateCompanion<Plan> {
       if (icon != null) 'icon': icon,
       if (startDate != null) 'start_date': startDate,
       if (endDate != null) 'end_date': endDate,
+      if (pinned != null) 'pinned': pinned,
+      if (archived != null) 'archived': archived,
       if (orderKey != null) 'order_key': orderKey,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
@@ -1070,6 +1143,8 @@ class PlansCompanion extends UpdateCompanion<Plan> {
       Value<String?>? icon,
       Value<DateTime?>? startDate,
       Value<DateTime?>? endDate,
+      Value<bool>? pinned,
+      Value<bool>? archived,
       Value<double>? orderKey,
       Value<DateTime>? createdAt,
       Value<DateTime>? updatedAt,
@@ -1080,6 +1155,8 @@ class PlansCompanion extends UpdateCompanion<Plan> {
       icon: icon ?? this.icon,
       startDate: startDate ?? this.startDate,
       endDate: endDate ?? this.endDate,
+      pinned: pinned ?? this.pinned,
+      archived: archived ?? this.archived,
       orderKey: orderKey ?? this.orderKey,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
@@ -1105,6 +1182,12 @@ class PlansCompanion extends UpdateCompanion<Plan> {
     if (endDate.present) {
       map['end_date'] = Variable<DateTime>(endDate.value);
     }
+    if (pinned.present) {
+      map['pinned'] = Variable<bool>(pinned.value);
+    }
+    if (archived.present) {
+      map['archived'] = Variable<bool>(archived.value);
+    }
     if (orderKey.present) {
       map['order_key'] = Variable<double>(orderKey.value);
     }
@@ -1128,6 +1211,8 @@ class PlansCompanion extends UpdateCompanion<Plan> {
           ..write('icon: $icon, ')
           ..write('startDate: $startDate, ')
           ..write('endDate: $endDate, ')
+          ..write('pinned: $pinned, ')
+          ..write('archived: $archived, ')
           ..write('orderKey: $orderKey, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
@@ -2173,6 +2258,8 @@ typedef $$PlansTableCreateCompanionBuilder = PlansCompanion Function({
   Value<String?> icon,
   Value<DateTime?> startDate,
   Value<DateTime?> endDate,
+  Value<bool> pinned,
+  Value<bool> archived,
   Value<double> orderKey,
   required DateTime createdAt,
   required DateTime updatedAt,
@@ -2184,6 +2271,8 @@ typedef $$PlansTableUpdateCompanionBuilder = PlansCompanion Function({
   Value<String?> icon,
   Value<DateTime?> startDate,
   Value<DateTime?> endDate,
+  Value<bool> pinned,
+  Value<bool> archived,
   Value<double> orderKey,
   Value<DateTime> createdAt,
   Value<DateTime> updatedAt,
@@ -2212,6 +2301,8 @@ class $$PlansTableTableManager extends RootTableManager<
             Value<String?> icon = const Value.absent(),
             Value<DateTime?> startDate = const Value.absent(),
             Value<DateTime?> endDate = const Value.absent(),
+            Value<bool> pinned = const Value.absent(),
+            Value<bool> archived = const Value.absent(),
             Value<double> orderKey = const Value.absent(),
             Value<DateTime> createdAt = const Value.absent(),
             Value<DateTime> updatedAt = const Value.absent(),
@@ -2223,6 +2314,8 @@ class $$PlansTableTableManager extends RootTableManager<
             icon: icon,
             startDate: startDate,
             endDate: endDate,
+            pinned: pinned,
+            archived: archived,
             orderKey: orderKey,
             createdAt: createdAt,
             updatedAt: updatedAt,
@@ -2234,6 +2327,8 @@ class $$PlansTableTableManager extends RootTableManager<
             Value<String?> icon = const Value.absent(),
             Value<DateTime?> startDate = const Value.absent(),
             Value<DateTime?> endDate = const Value.absent(),
+            Value<bool> pinned = const Value.absent(),
+            Value<bool> archived = const Value.absent(),
             Value<double> orderKey = const Value.absent(),
             required DateTime createdAt,
             required DateTime updatedAt,
@@ -2245,6 +2340,8 @@ class $$PlansTableTableManager extends RootTableManager<
             icon: icon,
             startDate: startDate,
             endDate: endDate,
+            pinned: pinned,
+            archived: archived,
             orderKey: orderKey,
             createdAt: createdAt,
             updatedAt: updatedAt,
@@ -2278,6 +2375,16 @@ class $$PlansTableFilterComposer
 
   ColumnFilters<DateTime> get endDate => $state.composableBuilder(
       column: $state.table.endDate,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<bool> get pinned => $state.composableBuilder(
+      column: $state.table.pinned,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<bool> get archived => $state.composableBuilder(
+      column: $state.table.archived,
       builder: (column, joinBuilders) =>
           ColumnFilters(column, joinBuilders: joinBuilders));
 
@@ -2322,6 +2429,16 @@ class $$PlansTableOrderingComposer
 
   ColumnOrderings<DateTime> get endDate => $state.composableBuilder(
       column: $state.table.endDate,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<bool> get pinned => $state.composableBuilder(
+      column: $state.table.pinned,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<bool> get archived => $state.composableBuilder(
+      column: $state.table.archived,
       builder: (column, joinBuilders) =>
           ColumnOrderings(column, joinBuilders: joinBuilders));
 

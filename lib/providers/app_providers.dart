@@ -29,6 +29,12 @@ class PlanRepository {
 
   Stream<List<Plan>> watchPlans() => _db.watchPlans();
 
+  Stream<List<PlanWithProgress>> watchPlansWithProgress() =>
+      _db.watchPlansWithProgress();
+
+  /// بجِ پایینِ تبِ برنامه‌ها: تسک‌هایی که موعدشون امروز یا قبل‌تره و انجام نشده
+  Stream<int> watchDueBadge() => _db.watchPlanBadgeCount();
+
   Future<void> createPlan(String name, {String? icon}) async {
     final now = DateTime.now();
     await _db.upsertPlan(PlansCompanion.insert(
@@ -43,6 +49,12 @@ class PlanRepository {
 
   Future<void> updatePlan(String id, {required String name, String? icon}) =>
       _db.updatePlan(id, name: name, icon: icon);
+
+  Future<void> setPinned(String id, bool pinned) =>
+      _db.setPlanPinned(id, pinned);
+
+  Future<void> setArchived(String id, bool archived) =>
+      _db.setPlanArchived(id, archived);
 
   Future<void> deletePlan(String id) => _db.deletePlan(id);
 
@@ -202,6 +214,10 @@ final dayTasksProvider = StreamProvider.autoDispose<List<Task>>((ref) {
 final plansProvider = StreamProvider.autoDispose<List<Plan>>(
     (ref) => ref.watch(planRepositoryProvider).watchPlans());
 
+final plansWithProgressProvider =
+    StreamProvider.autoDispose<List<PlanWithProgress>>(
+        (ref) => ref.watch(planRepositoryProvider).watchPlansWithProgress());
+
 final ideasProvider = StreamProvider.autoDispose<List<Task>>(
     (ref) => ref.watch(ideaRepositoryProvider).watchIdeas());
 
@@ -211,4 +227,4 @@ final planTasksProvider =
 
 // ── بج ──
 final planBadgeProvider = StreamProvider.autoDispose<int>(
-    (ref) => ref.watch(taskRepositoryProvider).watchPlanBadge());
+    (ref) => ref.watch(planRepositoryProvider).watchDueBadge());

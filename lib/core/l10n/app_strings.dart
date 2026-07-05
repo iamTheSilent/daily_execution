@@ -30,6 +30,17 @@ class AppStrings {
   String get convertedMsg     => _fa ? 'به برنامه‌ها اضافه شد ✓' : 'Added to plans ✓';
   String get sentToTodayMsg   => _fa ? 'به امروز اضافه شد ✓'    : 'Added to today ✓';
 
+  // ── جمع‌وجورِ برنامه‌ها (سنجاق / بایگانی / عقب‌افتاده) ──────────────────────
+  String get overdueLabel     => _fa ? 'عقب‌افتاده'          : 'Overdue';
+  String get pinLabel         => _fa ? 'سنجاق کردن'          : 'Pin';
+  String get unpinLabel       => _fa ? 'برداشتنِ سنجاق'      : 'Unpin';
+  String get archiveLabel     => _fa ? 'بایگانی'             : 'Archive';
+  String get unarchiveLabel   => _fa ? 'خروج از بایگانی'     : 'Unarchive';
+  String get archivedSection  => _fa ? 'بایگانی‌شده‌ها'       : 'Archived';
+  String get archivedMsg      => _fa ? 'بایگانی شد ✓'         : 'Archived ✓';
+  String get unarchivedMsg    => _fa ? 'از بایگانی خارج شد ✓' : 'Unarchived ✓';
+  String number(int n)        => _fa ? toFaDigits('$n') : '$n';
+
   // ── پوشه‌های ایده ─────────────────────────────────────────────────────────
   String get newFolder        => _fa ? 'پوشهٔ جدید'        : 'New folder';
   String get folderNameHint   => _fa ? 'نام پوشه…'         : 'Folder name…';

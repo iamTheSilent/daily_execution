@@ -4,12 +4,36 @@ import 'tables.dart';
 
 part 'database.g.dart';
 
+/// برنامه به‌همراهِ آمارِ پیشرفتش (برای مرتب‌سازی و نوارِ پیشرفت)
+class PlanWithProgress {
+  const PlanWithProgress({
+    required this.plan,
+    required this.total,
+    required this.done,
+    this.dueCount = 0,
+    this.overdueCount = 0,
+  });
+  final Plan plan;
+  final int total;
+  final int done;
+
+  /// تعدادِ تسک‌هایی که موعدشون امروز یا قبل‌تره و انجام نشده (عددِ قرمز)
+  final int dueCount;
+
+  /// تعدادِ تسک‌هایی که موعدشون قبل از امروز گذشته و انجام نشده (نشانِ «عقب‌افتاده»)
+  final int overdueCount;
+
+  int get remaining => total - done;
+  double get progress => total == 0 ? 0.0 : done / total;
+  bool get isCompleted => total > 0 && done >= total;
+}
+
 @DriftDatabase(tables: [Tasks, Plans, IdeaFolders, IdeaItems])
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(openConnection());
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -24,6 +48,10 @@ class AppDatabase extends _$AppDatabase {
           }
           if (from < 4) {
             await m.addColumn(plans, plans.icon);
+          }
+          if (from < 5) {
+            await m.addColumn(plans, plans.pinned);
+            await m.addColumn(plans, plans.archived);
           }
         },
       );
@@ -88,6 +116,50 @@ class AppDatabase extends _$AppDatabase {
   Stream<List<Plan>> watchPlans() =>
       (select(plans)..orderBy([(p) => OrderingTerm.asc(p.orderKey)])).watch();
 
+  /// برنامه‌ها + آمارِ پیشرفت (تعدادِ انجام‌شده و کل)
+  Stream<List<PlanWithProgress>> watchPlansWithProgress() {
+    final now = DateTime.now();
+    final startOfToday = DateTime(now.year, now.month, now.day);
+    final endOfToday = startOfToday
+        .add(const Duration(days: 1))
+        .subtract(const Duration(seconds: 1));
+
+    final doneExpr = tasks.id.count(
+      filter: tasks.status.equalsValue(TaskStatus.done),
+    );
+    final totalExpr = tasks.id.count();
+    // موعدشون امروز یا قبل‌تره و انجام نشده (عددِ قرمز)
+    final dueExpr = tasks.id.count(
+      filter: tasks.status.equalsValue(TaskStatus.done).not() &
+          tasks.dueDate.isSmallerOrEqualValue(endOfToday),
+    );
+    // موعدشون قبل از امروز گذشته و انجام نشده (نشانِ عقب‌افتاده)
+    final overdueExpr = tasks.id.count(
+      filter: tasks.status.equalsValue(TaskStatus.done).not() &
+          tasks.dueDate.isSmallerThanValue(startOfToday),
+    );
+    final query = select(plans).join([
+      leftOuterJoin(
+        tasks,
+        tasks.planId.equalsExp(plans.id) &
+            tasks.bucket.equalsValue(TaskBucket.plan),
+      ),
+    ])
+      ..addColumns([doneExpr, totalExpr, dueExpr, overdueExpr])
+      ..groupBy([plans.id]);
+    return query.watch().map(
+          (rows) => rows
+              .map((row) => PlanWithProgress(
+                    plan: row.readTable(plans),
+                    total: row.read(totalExpr) ?? 0,
+                    done: row.read(doneExpr) ?? 0,
+                    dueCount: row.read(dueExpr) ?? 0,
+                    overdueCount: row.read(overdueExpr) ?? 0,
+                  ))
+              .toList(),
+        );
+  }
+
   Future<void> upsertPlan(PlansCompanion p) =>
       into(plans).insertOnConflictUpdate(p);
 
@@ -108,6 +180,22 @@ class AppDatabase extends _$AppDatabase {
         PlansCompanion(
           name: Value(name),
           icon: Value(icon),
+          updatedAt: Value(DateTime.now()),
+        ),
+      );
+
+  Future<void> setPlanPinned(String id, bool pinned) =>
+      (update(plans)..where((p) => p.id.equals(id))).write(
+        PlansCompanion(
+          pinned: Value(pinned),
+          updatedAt: Value(DateTime.now()),
+        ),
+      );
+
+  Future<void> setPlanArchived(String id, bool archived) =>
+      (update(plans)..where((p) => p.id.equals(id))).write(
+        PlansCompanion(
+          archived: Value(archived),
           updatedAt: Value(DateTime.now()),
         ),
       );

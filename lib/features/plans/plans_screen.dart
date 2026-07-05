@@ -63,36 +63,76 @@ class _PlansScreenState extends ConsumerState<PlansScreen> {
   // ─── تب برنامه‌ها ────────────────────────────────────────────────────────────
 
   Widget _buildPlansTab(AppStrings s) {
-    final async = ref.watch(plansProvider);
+    final async = ref.watch(plansWithProgressProvider);
     return async.when(
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (e, _) => Center(child: Text('$e')),
-      data: (plans) {
-        if (plans.isEmpty) {
+      data: (items) {
+        if (items.isEmpty) {
           return Center(
             child: Text(s.emptyPlans,
                 textAlign: TextAlign.center,
                 style: const TextStyle(color: Colors.grey, height: 1.8)),
           );
         }
-        return ListView.builder(
+
+        final active = items.where((e) => !e.plan.archived).toList()
+          ..sort(_comparePlans);
+        final archived = items.where((e) => e.plan.archived).toList()
+          ..sort((a, b) => a.plan.orderKey.compareTo(b.plan.orderKey));
+
+        return ListView(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          itemCount: plans.length,
-          itemBuilder: (_, i) => _PlanTile(
-            plan: plans[i],
-            strings: s,
-            onOpen: () => Navigator.push(
-              context,
-              MaterialPageRoute(
-                  builder: (_) => PlanDetailScreen(plan: plans[i])),
-            ),
-            onRename: () => _editPlan(plans[i], s),
-            onDelete: () => _deletePlan(plans[i], s),
-          ),
+          children: [
+            if (active.isEmpty && archived.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.all(24),
+                child: Text(s.emptyPlans,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(color: Colors.grey, height: 1.8)),
+              ),
+            ...active.map((item) => _planTileFor(item, s)),
+            if (archived.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Theme(
+                data: Theme.of(context)
+                    .copyWith(dividerColor: Colors.transparent),
+                child: ExpansionTile(
+                  tilePadding: const EdgeInsets.symmetric(horizontal: 8),
+                  childrenPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.archive_outlined,
+                      color: AppColors.textSecondary),
+                  title: Text(
+                    '${s.archivedSection} (${s.number(archived.length)})',
+                    style: const TextStyle(
+                        color: AppColors.textSecondary,
+                        fontWeight: FontWeight.w600),
+                  ),
+                  children:
+                      archived.map((item) => _planTileFor(item, s)).toList(),
+                ),
+              ),
+            ],
+          ],
         );
       },
     );
   }
+
+  Widget _planTileFor(PlanWithProgress item, AppStrings s) => _PlanTile(
+        item: item,
+        strings: s,
+        onOpen: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => PlanDetailScreen(plan: item.plan)),
+        ),
+        onRename: () => _editPlan(item.plan, s),
+        onDelete: () => _deletePlan(item.plan, s),
+        onTogglePin: () => ref
+            .read(planRepositoryProvider)
+            .setPinned(item.plan.id, !item.plan.pinned),
+        onToggleArchive: () => _toggleArchive(item, s),
+      );
 
   Future<void> _addPlan(AppStrings s) async {
     final res = await _planSheet(context, s);
@@ -112,6 +152,19 @@ class _PlansScreenState extends ConsumerState<PlansScreen> {
   Future<void> _deletePlan(Plan plan, AppStrings s) async {
     if (!await _confirmDelete(s)) return;
     await ref.read(planRepositoryProvider).deletePlan(plan.id);
+  }
+
+  Future<void> _toggleArchive(PlanWithProgress item, AppStrings s) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final nowArchived = !item.plan.archived;
+    await ref
+        .read(planRepositoryProvider)
+        .setArchived(item.plan.id, nowArchived);
+    messenger
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(
+          content: Text(nowArchived ? s.archivedMsg : s.unarchivedMsg),
+          duration: const Duration(milliseconds: 1500)));
   }
 
   // ─── تب ایده‌ها (لیستِ صاف) ───────────────────────────────────────────────────
@@ -228,9 +281,11 @@ class _PlansScreenState extends ConsumerState<PlansScreen> {
           duration: const Duration(milliseconds: 1500)));
   }
 
-  // ۲) افزودن به یکی از برنامه‌های موجود (لیستِ اسکرولی)
+  // ۲) افزودن به یکی از برنامه‌های موجود (لیستِ اسکرولی، بدونِ بایگانی‌شده‌ها)
   Future<void> _ideaToExistingPlan(Task idea, AppStrings s) async {
-    final plans = ref.read(plansProvider).valueOrNull ?? const <Plan>[];
+    final plans = (ref.read(plansProvider).valueOrNull ?? const <Plan>[])
+        .where((p) => !p.archived)
+        .toList();
     if (plans.isEmpty) {
       ScaffoldMessenger.of(context)
         ..hideCurrentSnackBar()
@@ -420,87 +475,196 @@ class _PlansScreenState extends ConsumerState<PlansScreen> {
       false;
 }
 
-// ─── کارتِ برنامه (درشت + پراگرس‌بار + ایموجی) ──────────────────────────────────
+// مرتب‌سازی: سنجاق‌شده‌ها بالا → کامل‌نشده‌ها → کامل‌شده‌ها پایین
+int _comparePlans(PlanWithProgress a, PlanWithProgress b) {
+  if (a.plan.pinned != b.plan.pinned) return a.plan.pinned ? -1 : 1;
+  if (a.isCompleted != b.isCompleted) return a.isCompleted ? 1 : -1;
+  return a.plan.orderKey.compareTo(b.plan.orderKey);
+}
 
-class _PlanTile extends ConsumerWidget {
+// ─── کارتِ برنامه (درشت + پیشرفت + بَج + سنجاق/بایگانی) ─────────────────────────
+
+class _PlanTile extends StatelessWidget {
   const _PlanTile({
-    required this.plan,
+    required this.item,
     required this.strings,
     required this.onOpen,
     required this.onRename,
     required this.onDelete,
+    required this.onTogglePin,
+    required this.onToggleArchive,
   });
-  final Plan plan;
+  final PlanWithProgress item;
   final AppStrings strings;
   final VoidCallback onOpen;
   final VoidCallback onRename;
   final VoidCallback onDelete;
+  final VoidCallback onTogglePin;
+  final VoidCallback onToggleArchive;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final tasks = ref.watch(planTasksProvider(plan.id)).valueOrNull ??
-        const <Task>[];
-    final done = tasks.where((t) => t.status == TaskStatus.done).length;
-    final total = tasks.length;
-    final remaining = total - done;
-    final progress = total == 0 ? 0.0 : done / total;
+  Widget build(BuildContext context) {
+    final plan = item.plan;
+    final completed = item.isCompleted;
 
-    return Card(
-      margin: const EdgeInsets.symmetric(vertical: 8),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(16),
-        onTap: onOpen,
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(children: [
-                Text(plan.icon ?? '📋', style: const TextStyle(fontSize: 22)),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(plan.name,
-                      style: const TextStyle(
-                          fontSize: 18, fontWeight: FontWeight.bold)),
-                ),
-                PopupMenuButton<String>(
-                  onSelected: (v) {
-                    if (v == 'rename') onRename();
-                    if (v == 'delete') onDelete();
-                  },
-                  itemBuilder: (_) => [
-                    PopupMenuItem(
-                        value: 'rename', child: Text(strings.renameLabel)),
-                    PopupMenuItem(
-                        value: 'delete',
-                        child: Text(strings.deleteLabel,
-                            style: const TextStyle(color: Colors.red))),
+    final today = DateTime.now();
+    final startOfToday = DateTime(today.year, today.month, today.day);
+    // عقب‌افتاده = یا تاریخِ پایانِ خودِ برنامه گذشته، یا تسکِ عقب‌افتاده دارد
+    final overdue = !completed &&
+        ((plan.endDate != null && plan.endDate!.isBefore(startOfToday)) ||
+            item.overdueCount > 0);
+
+    return Opacity(
+      opacity: plan.archived ? 0.6 : 1,
+      child: Card(
+        margin: const EdgeInsets.symmetric(vertical: 6),
+        elevation: 0,
+        color: AppColors.surface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(18),
+          side: const BorderSide(color: AppColors.divider),
+        ),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(18),
+          onTap: onOpen,
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(children: [
+                  Text(plan.icon ?? '📋', style: const TextStyle(fontSize: 22)),
+                  const SizedBox(width: 10),
+                  if (plan.pinned) ...[
+                    const Icon(Icons.push_pin,
+                        size: 15, color: AppColors.accent),
+                    const SizedBox(width: 4),
                   ],
-                ),
-              ]),
-              const SizedBox(height: 12),
-              Row(children: [
-                Text('$remaining ${strings.remainingLabel}',
-                    style: const TextStyle(
-                        color: AppColors.accent,
+                  Expanded(
+                    child: Text(
+                      plan.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 18,
                         fontWeight: FontWeight.bold,
-                        fontSize: 13)),
-                const SizedBox(width: 10),
-                Text('$done/$total ${strings.doneLabel}',
-                    style: const TextStyle(color: Colors.grey, fontSize: 13)),
-              ]),
-              const SizedBox(height: 8),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: LinearProgressIndicator(
-                  value: progress,
-                  minHeight: 8,
-                  backgroundColor: Colors.grey.withOpacity(0.2),
-                  valueColor: const AlwaysStoppedAnimation(AppColors.accent),
+                        decoration:
+                            completed ? TextDecoration.lineThrough : null,
+                        color: completed
+                            ? AppColors.textSecondary
+                            : AppColors.textPrimary,
+                      ),
+                    ),
+                  ),
+                  if (completed)
+                    const Padding(
+                      padding: EdgeInsets.only(left: 4),
+                      child: Icon(Icons.check_circle,
+                          size: 20, color: AppColors.green),
+                    ),
+                  if (item.dueCount > 0)
+                    Container(
+                      margin: const EdgeInsets.only(left: 4),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 7, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: AppColors.red,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Text(
+                        strings.number(item.dueCount),
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  PopupMenuButton<String>(
+                    icon: const Icon(Icons.more_horiz,
+                        color: AppColors.textSecondary),
+                    onSelected: (v) {
+                      switch (v) {
+                        case 'pin':
+                          onTogglePin();
+                          break;
+                        case 'archive':
+                          onToggleArchive();
+                          break;
+                        case 'rename':
+                          onRename();
+                          break;
+                        case 'delete':
+                          onDelete();
+                          break;
+                      }
+                    },
+                    itemBuilder: (_) => [
+                      PopupMenuItem(
+                          value: 'pin',
+                          child: Text(plan.pinned
+                              ? strings.unpinLabel
+                              : strings.pinLabel)),
+                      PopupMenuItem(
+                          value: 'archive',
+                          child: Text(plan.archived
+                              ? strings.unarchiveLabel
+                              : strings.archiveLabel)),
+                      PopupMenuItem(
+                          value: 'rename', child: Text(strings.renameLabel)),
+                      PopupMenuItem(
+                          value: 'delete',
+                          child: Text(strings.deleteLabel,
+                              style: const TextStyle(color: Colors.red))),
+                    ],
+                  ),
+                ]),
+                if (overdue) ...[
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: AppColors.red.withOpacity(0.12),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(mainAxisSize: MainAxisSize.min, children: [
+                      const Icon(Icons.error_outline,
+                          size: 13, color: AppColors.red),
+                      const SizedBox(width: 4),
+                      Text(strings.overdueLabel,
+                          style: const TextStyle(
+                              color: AppColors.red,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600)),
+                    ]),
+                  ),
+                ],
+                const SizedBox(height: 12),
+                Row(children: [
+                  Text('${strings.number(item.remaining)} ${strings.remainingLabel}',
+                      style: const TextStyle(
+                          color: AppColors.accent,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13)),
+                  const SizedBox(width: 10),
+                  Text(
+                      '${strings.number(item.done)}/${strings.number(item.total)} ${strings.doneLabel}',
+                      style: const TextStyle(
+                          color: AppColors.textSecondary, fontSize: 13)),
+                ]),
+                const SizedBox(height: 8),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: LinearProgressIndicator(
+                    value: item.progress,
+                    minHeight: 8,
+                    backgroundColor: AppColors.progressTrack,
+                    valueColor: AlwaysStoppedAnimation(
+                        completed ? AppColors.green : AppColors.accent),
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

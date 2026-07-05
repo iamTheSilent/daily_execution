@@ -28,9 +28,13 @@ class Tasks extends Table {
 class Plans extends Table {
   TextColumn get id => text()();
   TextColumn get name => text()();
-  TextColumn get icon => text().nullable()(); // ← جدید: ایموجیِ برنامه
+  TextColumn get icon => text().nullable()(); // ← ایموجیِ برنامه
   DateTimeColumn get startDate => dateTime().nullable()();
   DateTimeColumn get endDate => dateTime().nullable()();
+  BoolColumn get pinned =>
+      boolean().withDefault(const Constant(false))(); // ← جدید: سنجاق
+  BoolColumn get archived =>
+      boolean().withDefault(const Constant(false))(); // ← جدید: بایگانی
   RealColumn get orderKey => real().withDefault(const Constant(0))();
   DateTimeColumn get createdAt => dateTime()();
   DateTimeColumn get updatedAt => dateTime()();
