@@ -60,15 +60,17 @@ class _IdeaDetailScreenState extends ConsumerState<IdeaDetailScreen> {
   }
 
   String _timeText(DateTime dt) {
+    final isFa = ref.read(localeProvider).languageCode == 'fa';
     final h = dt.hour.toString().padLeft(2, '0');
     final m = dt.minute.toString().padLeft(2, '0');
-    return toFaDigits('$h:$m');
+    return isFa ? toFaDigits('$h:$m') : '$h:$m';
   }
 
   @override
   Widget build(BuildContext context) {
     final s = ref.watch(appStringsProvider);
     final mode = ref.watch(calendarModeProvider);
+    final isFa = ref.watch(localeProvider).languageCode == 'fa';   // ← این خط جدید
 
     return Scaffold(
       appBar: AppBar(
@@ -104,7 +106,7 @@ class _IdeaDetailScreenState extends ConsumerState<IdeaDetailScreen> {
             leading: const Icon(Icons.schedule),
             title: Text(_scheduledAt == null
                 ? s.addTime
-                : AppDate.primaryLong(_scheduledAt!, mode)),
+                : AppDate.primaryLong(_scheduledAt!, mode, faDigits: isFa)),
             subtitle:
                 _scheduledAt == null ? null : Text(_timeText(_scheduledAt!)),
             trailing: _scheduledAt == null

@@ -131,7 +131,8 @@ class PlanDetailScreen extends ConsumerWidget {
                   label: Text(due == null
                       ? s.addTime
                       : AppDate.secondaryShort(
-                          due!, ref.read(calendarModeProvider))),
+                          due!, ref.read(calendarModeProvider),
+                          faDigits: isFa)),
                   onPressed: () async {
                     final d = await showWheelDateTime(sheetCtx,
                         initial: due,
@@ -340,9 +341,12 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
     if (picked != null) setState(() => _dueDate = picked);
   }
 
-  String _clock(DateTime dt) =>
-      toFaDigits('${dt.hour.toString().padLeft(2, '0')}:'
-          '${dt.minute.toString().padLeft(2, '0')}');
+  String _clock(DateTime dt) {
+    final isFa = ref.read(localeProvider).languageCode == 'fa';
+    final t = '${dt.hour.toString().padLeft(2, '0')}:'
+        '${dt.minute.toString().padLeft(2, '0')}';
+    return isFa ? toFaDigits(t) : t;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -420,7 +424,7 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
               leading: const Icon(Icons.schedule),
               title: Text(_dueDate == null
                   ? s.addTime
-                  : AppDate.primaryLong(_dueDate!, mode)),
+                  : AppDate.primaryLong(_dueDate!, mode, faDigits: isFa)),
               subtitle: _dueDate == null ? null : Text(_clock(_dueDate!)),
               trailing: _dueDate == null
                   ? null

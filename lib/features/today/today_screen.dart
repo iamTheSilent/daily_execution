@@ -48,7 +48,7 @@ class TodayScreen extends ConsumerWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            AppDate.primaryLong(day, mode),
+                            AppDate.primaryLong(day, mode, faDigits: isFa),
                             style: const TextStyle(
                               fontSize: 24,
                               fontWeight: FontWeight.bold,
@@ -58,7 +58,7 @@ class TodayScreen extends ConsumerWidget {
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            AppDate.secondaryShort(day, mode),
+                            AppDate.secondaryShort(day, mode, faDigits: isFa),
                             textDirection: TextDirection.ltr,
                             style: const TextStyle(
                               fontSize: 12,
@@ -146,6 +146,7 @@ class TodayScreen extends ConsumerWidget {
   }
 
   Future<void> _quickAdd(BuildContext context, WidgetRef ref) async {
+    final isFa = ref.read(localeProvider).languageCode == 'fa';   // ← این خط جدید
     final ctrl = TextEditingController();
     final title = await showModalBottomSheet<String>(
       context: context,
@@ -162,7 +163,8 @@ class TodayScreen extends ConsumerWidget {
             child: TextField(
               controller: ctrl,
               autofocus: true,
-              decoration: const InputDecoration(hintText: 'کار جدید…'),
+              decoration: InputDecoration(
+                    hintText: isFa ? 'کار جدید…' : 'New task…'),
               onSubmitted: (v) => Navigator.pop(ctx, v),
             ),
           ),

@@ -96,4 +96,14 @@ class AppStrings {
   String get sortTimeFirst   => _fa ? 'اول زمان‌دارها'  : 'Time first';
   String get sortStatusOrder => _fa ? 'بر اساس وضعیت'  : 'Status order';
   String get sortManual      => _fa ? 'دستی (کشیدن)'   : 'Manual (Drag)';
+
+  // ── تنظیمات و تقویم ───────────────────────────────────────────────────────
+String get language       => _fa ? 'زبان'      : 'Language';
+String get calendarSystem => _fa ? 'نوع تقویم' : 'Calendar system';
+String get calShamsi      => _fa ? 'شمسی'      : 'Shamsi';
+String get calGregorian   => _fa ? 'میلادی'    : 'Gregorian';
+String get week           => _fa ? 'هفته'      : 'Week';
+String get month          => _fa ? 'ماه'       : 'Month';
+String get today          => _fa ? 'امروز'     : 'Today';
+String get calEmptyDay    => _fa ? 'برای این روز کاری نیست' : 'No tasks for this day';
 }
