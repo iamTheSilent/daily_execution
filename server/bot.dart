@@ -13,7 +13,7 @@ const dataFileName = 'data.json';
 // ------------------------------------------
 
 late String botBase;
-late HttpClient tg;
+late HttpClient tg;                 
 
 // In-memory store (also saved to data.json)
 Map<String, dynamic> store = {
@@ -92,12 +92,19 @@ Future<void> startPolling() async {
 
 // ---------------- HTTP API (the app syncs here) ----------------
 Future<void> startHttp() async {
-  final server = await HttpServer.bind(InternetAddress.loopbackIPv4, httpPort);
-  stdout.writeln('HTTP API روی http://127.0.0.1:$httpPort آماده‌ست');
+  final server = await HttpServer.bind(InternetAddress.anyIPv4, httpPort);
+  stdout.writeln('HTTP API ready on port $httpPort (127.0.0.1 + LAN IP)');
   await for (final req in server) {
     try {
+      // CORS: allow the web app (Chrome) to call this API.
+      req.response.headers.set('Access-Control-Allow-Origin', '*');
+      req.response.headers.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+      req.response.headers.set('Access-Control-Allow-Headers', 'Content-Type');
+
       final path = req.uri.path;
-      if (path == '/health') {
+      if (req.method == 'OPTIONS') {
+        req.response.statusCode = 204;
+      } else if (path == '/health') {
         req.response.write('ok');
       } else if (path == '/addtest' && req.method == 'GET') {
         final minutes =
