@@ -2,18 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shamsi_date/shamsi_date.dart';
 import '../../core/date/app_date.dart';
+import '../../core/theme/app_colors.dart';
 import '../../data/database/database.dart';
 import '../../data/database/tables.dart';
 import '../../domain/task_logic.dart';
 import '../../providers/app_providers.dart';
-
-// Local palette (literals to avoid guessing AppColors field names).
-const _kBg = Color(0xFFF2EEE7);
-const _kDark = Color(0xFF1C1C1E);
-const _kAccent = Color(0xFFFF9500);
-const _kGreen = Color(0xFF34C759);
-const _kTextSecondary = Color(0xFF9A958C);
-const _kDivider = Color(0xFFE8E4DC);
 
 /// Tasks of a single day (day = normalized midnight local).
 final calendarDayTasksProvider =
@@ -119,13 +112,14 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final p = context.palette;
     final s = ref.watch(appStringsProvider);
     final mode = ref.watch(calendarModeProvider);
     final fa = ref.watch(localeProvider).languageCode == 'fa';
     final dayTasks = ref.watch(calendarDayTasksProvider(_norm(_selected)));
 
     return Scaffold(
-      backgroundColor: _kBg,
+      backgroundColor: p.background,
       body: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -135,10 +129,10 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
               child: Row(
                 children: [
                   Text(s.navCalendar,
-                      style: const TextStyle(
+                      style: TextStyle(
                           fontSize: 26,
                           fontWeight: FontWeight.w800,
-                          color: _kDark)),
+                          color: p.textPrimary)),
                   const Spacer(),
                   TextButton(
                     onPressed: () => setState(() => _selected = _today()),
@@ -151,19 +145,19 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
               children: [
                 IconButton(
                     onPressed: () => _shiftBack(mode),
-                    icon: const Icon(Icons.chevron_left, color: _kDark)),
+                    icon: Icon(Icons.chevron_left, color: p.textPrimary)),
                 Expanded(
                   child: Center(
                     child: Text(AppDate.monthYear(_selected, mode, faDigits: fa),
-                        style: const TextStyle(
+                        style: TextStyle(
                             fontSize: 17,
                             fontWeight: FontWeight.w700,
-                            color: _kDark)),
+                            color: p.textPrimary)),
                   ),
                 ),
                 IconButton(
                     onPressed: () => _shiftFwd(mode),
-                    icon: const Icon(Icons.chevron_right, color: _kDark)),
+                    icon: Icon(Icons.chevron_right, color: p.textPrimary)),
               ],
             ),
             Padding(
@@ -200,24 +194,24 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
               child: Align(
                 alignment: AlignmentDirectional.centerStart,
                 child: Text(AppDate.primaryLong(_selected, mode, faDigits: fa),
-                    style: const TextStyle(
+                    style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w700,
-                        color: _kDark)),
+                        color: p.textPrimary)),
               ),
             ),
-            const Divider(height: 1, color: _kDivider),
+            Divider(height: 1, color: p.divider),
             Expanded(
               child: dayTasks.when(
                 data: (list) => list.isEmpty
                     ? Center(
                         child: Text(s.calEmptyDay,
-                            style: const TextStyle(color: _kTextSecondary)))
+                            style: TextStyle(color: p.textSecondary)))
                     : ListView.separated(
                         itemCount: list.length,
-                        separatorBuilder: (_, __) => const Divider(
+                        separatorBuilder: (_, __) => Divider(
                             height: 1,
-                            color: _kDivider,
+                            color: p.divider,
                             indent: 16,
                             endIndent: 16),
                         itemBuilder: (_, i) => _taskRow(list[i], fa),
@@ -233,18 +227,20 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
     );
   }
 
-  Widget _weekdayHeader(CalendarMode mode) => Row(
-        children: [
-          for (final l in AppDate.weekdayHeaders(mode))
-            Expanded(
-              child: Center(
-                child: Text(l,
-                    style: const TextStyle(
-                        fontSize: 12, color: _kTextSecondary)),
-              ),
+  Widget _weekdayHeader(CalendarMode mode) {
+    final p = context.palette;
+    return Row(
+      children: [
+        for (final l in AppDate.weekdayHeaders(mode))
+          Expanded(
+            child: Center(
+              child: Text(l,
+                  style: TextStyle(fontSize: 12, color: p.textSecondary)),
             ),
-        ],
-      );
+          ),
+      ],
+    );
+  }
 
   Widget _weekStrip(CalendarMode mode, bool fa) {
     final start = _saturdayOf(_selected);
@@ -280,6 +276,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
 
   Widget _dayCell(DateTime day, CalendarMode mode, bool fa,
       {required bool week}) {
+    final p = context.palette;
     final isSel = _sameDay(day, _selected);
     final isToday = _sameDay(day, _today());
     final hasTasks =
@@ -295,7 +292,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
           children: [
             if (week) ...[
               Text(AppDate.weekdayShort(day, mode),
-                  style: const TextStyle(fontSize: 12, color: _kTextSecondary)),
+                  style: TextStyle(fontSize: 12, color: p.textSecondary)),
               const SizedBox(height: 6),
             ],
             Container(
@@ -304,7 +301,9 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
               alignment: Alignment.center,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: isSel ? _kDark : Colors.transparent,
+                // Selected day: high-contrast chip that inverts with the theme
+                // (dark chip in light mode, light chip in dark mode).
+                color: isSel ? p.textPrimary : Colors.transparent,
               ),
               child: Text(
                 AppDate.dayNum(day, mode, faDigits: fa),
@@ -312,7 +311,9 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                   fontSize: 15,
                   fontWeight:
                       (isSel || isToday) ? FontWeight.w700 : FontWeight.normal,
-                  color: isSel ? Colors.white : (isToday ? _kAccent : _kDark),
+                  color: isSel
+                      ? p.background
+                      : (isToday ? p.accent : p.textPrimary),
                 ),
               ),
             ),
@@ -322,7 +323,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
               height: 5,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: (hasTasks && !isSel) ? _kAccent : Colors.transparent,
+                color: (hasTasks && !isSel) ? p.accent : Colors.transparent,
               ),
             ),
           ],
@@ -332,6 +333,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
   }
 
   Widget _taskRow(Task t, bool fa) {
+    final p = context.palette;
     final done = t.status == TaskStatus.done;
     String? timeStr;
     if (t.timeStart != null) {
@@ -352,15 +354,16 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                 t.title,
                 style: TextStyle(
                   fontSize: 15,
-                  color: done ? _kTextSecondary : _kDark,
+                  color: done ? p.textSecondary : p.textPrimary,
                   decoration: done ? TextDecoration.lineThrough : null,
+                  decorationColor: done ? p.textSecondary : null,
                 ),
               ),
             ),
             if (timeStr != null) ...[
               const SizedBox(width: 8),
               Text(timeStr,
-                  style: const TextStyle(fontSize: 13, color: _kTextSecondary)),
+                  style: TextStyle(fontSize: 13, color: p.textSecondary)),
             ],
           ],
         ),
@@ -368,24 +371,27 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
     );
   }
 
-  Widget _statusDot(TaskStatus st) => switch (st) {
-        TaskStatus.done =>
-          const Icon(Icons.check_circle, size: 20, color: _kGreen),
-        TaskStatus.doing => Container(
-            width: 18,
-            height: 18,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(color: _kAccent, width: 2),
-            ),
+  Widget _statusDot(TaskStatus st) {
+    final p = context.palette;
+    return switch (st) {
+      TaskStatus.done =>
+        Icon(Icons.check_circle, size: 20, color: p.green),
+      TaskStatus.doing => Container(
+          width: 18,
+          height: 18,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            border: Border.all(color: p.accent, width: 2),
           ),
-        TaskStatus.todo => Container(
-            width: 18,
-            height: 18,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(color: _kTextSecondary, width: 1.5),
-            ),
+        ),
+      TaskStatus.todo => Container(
+          width: 18,
+          height: 18,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            border: Border.all(color: p.textSecondary, width: 1.5),
           ),
-      };
+        ),
+    };
+  }
 }

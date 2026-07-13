@@ -17,11 +17,12 @@ class TaskRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final p = context.palette;
     final isDone = task.status == TaskStatus.done;
     final isDoing = task.status == TaskStatus.doing;
     final bg = isDone
-        ? AppColors.doneBg
-        : (task.focus ? AppColors.focusTint : AppColors.surface);
+        ? p.doneBg
+        : (task.focus ? p.focusTint : p.surface);
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 5),
@@ -53,18 +54,19 @@ class TaskRow extends StatelessWidget {
                           height: 1.2,
                           decoration:
                               isDone ? TextDecoration.lineThrough : null,
-                          color: isDone
-                              ? AppColors.textSecondary
-                              : AppColors.textPrimary,
+                          // Strikethrough follows the text color, so it also
+                          // turns light in dark mode.
+                          decorationColor: isDone ? p.textSecondary : null,
+                          color: isDone ? p.textSecondary : p.textPrimary,
                         ),
                       ),
                       if (task.timeStart != null) ...[
                         const SizedBox(height: 3),
                         Text(
                           _formatTime(task.timeStart, task.timeEnd),
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 12.5,
-                            color: AppColors.accent,
+                            color: p.accent,
                             fontWeight: FontWeight.w500,
                           ),
                         ),
@@ -96,18 +98,19 @@ class _StatusRing extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final p = context.palette;
     if (isDone) {
-      return const Icon(Icons.check_circle, color: AppColors.green, size: 26);
+      return Icon(Icons.check_circle, color: p.green, size: 26);
     }
     if (isDoing) {
-      return const SizedBox(
+      return SizedBox(
         width: 24,
         height: 24,
         child: CircularProgressIndicator(
           strokeWidth: 3,
           value: null, // چرخشی (بی‌نهایت) به‌جای ثابت
-          color: AppColors.accent,
-          backgroundColor: AppColors.progressTrack,
+          color: p.accent,
+          backgroundColor: p.progressTrack,
         ),
       );
     }
@@ -116,7 +119,7 @@ class _StatusRing extends StatelessWidget {
       height: 24,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        border: Border.all(color: AppColors.textSecondary, width: 2),
+        border: Border.all(color: p.textSecondary, width: 2),
       ),
     );
   }
