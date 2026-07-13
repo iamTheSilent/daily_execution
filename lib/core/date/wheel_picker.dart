@@ -27,6 +27,21 @@ Future<DateTime?> showWheelDateTime(
   );
 }
 
+/// انتخابگرِ فقط‌زمان (ساعت:دقیقه). تعدادِ دقیقه‌ها از نیمه‌شب را برمی‌گرداند.
+Future<int?> showTimeWheel(
+  BuildContext context, {
+  required int initialMinutes,
+  bool isFa = true,
+}) {
+  return showModalBottomSheet<int>(
+    context: context,
+    backgroundColor: Colors.transparent,
+    isScrollControlled: true,
+    builder: (_) =>
+        _TimeWheelSheet(initialMinutes: initialMinutes, isFa: isFa),
+  );
+}
+
 class _WheelSheet extends StatefulWidget {
   const _WheelSheet({
     required this.initial,
@@ -52,6 +67,13 @@ class _WheelSheetState extends State<_WheelSheet> {
       _hourCtrl,
       _minuteCtrl;
 
+  // لیست‌ها یک‌بار ساخته می‌شوند تا هر بار اسکرول دوباره ساخته نشوند (رفعِ کندی).
+  late final List<String> _years, _months, _hours, _minutes;
+  late List<String> _days;
+
+  String _fa(String s) => widget.isFa ? toFaDigits(s) : s;
+  String _two(int n) => n.toString().padLeft(2, '0');
+
   @override
   void initState() {
     super.initState();
@@ -75,7 +97,17 @@ class _WheelSheetState extends State<_WheelSheet> {
     _dayCtrl = FixedExtentScrollController(initialItem: _day - 1);
     _hourCtrl = FixedExtentScrollController(initialItem: _hour);
     _minuteCtrl = FixedExtentScrollController(initialItem: _minute);
+
+    _years = [for (int y = _minYear; y <= _minYear + 10; y++) _fa('$y')];
+    _months =
+        _shamsi ? _faMonths : [for (int m = 1; m <= 12; m++) _fa('$m')];
+    _hours = [for (int h = 0; h < 24; h++) _fa(_two(h))];
+    _minutes = [for (int m = 0; m < 60; m++) _fa(_two(m))];
+    _days = _buildDays();
   }
+
+  List<String> _buildDays() =>
+      [for (int d = 1; d <= _daysInMonth; d++) _fa('$d')];
 
   @override
   void dispose() {
@@ -91,6 +123,7 @@ class _WheelSheetState extends State<_WheelSheet> {
       _shamsi ? Jalali(_year, _month, 1).monthLength : DateTime(_year, _month + 1, 0).day;
 
   void _clampDay() {
+    _days = _buildDays();
     final max = _daysInMonth;
     if (_day > max) {
       _day = max;
@@ -108,22 +141,13 @@ class _WheelSheetState extends State<_WheelSheet> {
     return DateTime(_year, _month, _day, _hour, _minute);
   }
 
-  String _fa(String s) => widget.isFa ? toFaDigits(s) : s;
-  String _two(int n) => n.toString().padLeft(2, '0');
-
   @override
   Widget build(BuildContext context) {
-    final years = [for (int y = _minYear; y <= _minYear + 10; y++) _fa('$y')];
-    final months =
-        _shamsi ? _faMonths : [for (int m = 1; m <= 12; m++) _fa('$m')];
-    final days = [for (int d = 1; d <= _daysInMonth; d++) _fa('$d')];
-    final hours = [for (int h = 0; h < 24; h++) _fa(_two(h))];
-    final minutes = [for (int m = 0; m < 60; m++) _fa(_two(m))];
-
+    final p = context.palette;
     return Container(
-      decoration: const BoxDecoration(
-        color: AppColors.background,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      decoration: BoxDecoration(
+        color: p.background,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
       ),
       padding:
           EdgeInsets.only(bottom: MediaQuery.of(context).padding.bottom + 12),
@@ -135,7 +159,7 @@ class _WheelSheetState extends State<_WheelSheet> {
             height: 4,
             margin: const EdgeInsets.only(top: 10, bottom: 4),
             decoration: BoxDecoration(
-              color: AppColors.divider,
+              color: p.divider,
               borderRadius: BorderRadius.circular(2),
             ),
           ),
@@ -147,17 +171,17 @@ class _WheelSheetState extends State<_WheelSheet> {
                 TextButton(
                   onPressed: () => Navigator.pop(context),
                   child: Text(widget.isFa ? 'لغو' : 'Cancel',
-                      style: const TextStyle(color: AppColors.textSecondary)),
+                      style: TextStyle(color: p.textSecondary)),
                 ),
                 Text(widget.isFa ? 'زمان و تاریخ' : 'Date & time',
-                    style: const TextStyle(
+                    style: TextStyle(
                         fontWeight: FontWeight.bold,
-                        color: AppColors.textPrimary)),
+                        color: p.textPrimary)),
                 TextButton(
                   onPressed: () => Navigator.pop(context, _result()),
                   child: Text(widget.isFa ? 'تأیید' : 'Done',
-                      style: const TextStyle(
-                          color: AppColors.accent,
+                      style: TextStyle(
+                          color: p.accent,
                           fontWeight: FontWeight.bold)),
                 ),
               ],
@@ -172,7 +196,7 @@ class _WheelSheetState extends State<_WheelSheet> {
                   height: 40,
                   margin: const EdgeInsets.symmetric(horizontal: 10),
                   decoration: BoxDecoration(
-                    color: AppColors.surface,
+                    color: p.surface,
                     borderRadius: BorderRadius.circular(12),
                   ),
                 ),
@@ -180,23 +204,23 @@ class _WheelSheetState extends State<_WheelSheet> {
                   textDirection: TextDirection.ltr,
                   child: Row(
                     children: [
-                      _wheel(days, _dayCtrl, 2,
+                      _wheel(_days, _dayCtrl, 2,
                           (i) => setState(() => _day = i + 1)),
-                      _wheel(months, _monthCtrl, 3,
+                      _wheel(_months, _monthCtrl, 3,
                           (i) => setState(() {
                                 _month = i + 1;
                                 _clampDay();
                               })),
-                      _wheel(years, _yearCtrl, 3,
+                      _wheel(_years, _yearCtrl, 3,
                           (i) => setState(() {
                                 _year = _minYear + i;
                                 _clampDay();
                               })),
                       const SizedBox(width: 8),
-                      _wheel(hours, _hourCtrl, 2,
+                      _wheel(_hours, _hourCtrl, 2,
                           (i) => setState(() => _hour = i)),
                       const _Colon(),
-                      _wheel(minutes, _minuteCtrl, 2,
+                      _wheel(_minutes, _minuteCtrl, 2,
                           (i) => setState(() => _minute = i)),
                     ],
                   ),
@@ -211,6 +235,7 @@ class _WheelSheetState extends State<_WheelSheet> {
 
   Widget _wheel(List<String> labels, FixedExtentScrollController ctrl, int flex,
       ValueChanged<int> onChanged) {
+    final p = context.palette;
     return Expanded(
       flex: flex,
       child: ListWheelScrollView.useDelegate(
@@ -225,8 +250,7 @@ class _WheelSheetState extends State<_WheelSheet> {
           builder: (_, i) => Center(
             child: Text(labels[i],
                 maxLines: 1,
-                style: const TextStyle(
-                    fontSize: 18, color: AppColors.textPrimary)),
+                style: TextStyle(fontSize: 18, color: p.textPrimary)),
           ),
         ),
       ),
@@ -237,13 +261,160 @@ class _WheelSheetState extends State<_WheelSheet> {
 class _Colon extends StatelessWidget {
   const _Colon();
   @override
-  Widget build(BuildContext context) => const SizedBox(
+  Widget build(BuildContext context) => SizedBox(
         width: 10,
         child: Center(
             child: Text(':',
                 style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
-                    color: AppColors.textSecondary))),
+                    color: context.palette.textSecondary))),
       );
+}
+
+// ════════════════════ انتخابگرِ فقط‌زمان ════════════════════
+class _TimeWheelSheet extends StatefulWidget {
+  const _TimeWheelSheet({required this.initialMinutes, required this.isFa});
+  final int initialMinutes;
+  final bool isFa;
+  @override
+  State<_TimeWheelSheet> createState() => _TimeWheelSheetState();
+}
+
+class _TimeWheelSheetState extends State<_TimeWheelSheet> {
+  late int _hour = widget.initialMinutes ~/ 60;
+  late int _minute = widget.initialMinutes % 60;
+  late final FixedExtentScrollController _hourCtrl =
+      FixedExtentScrollController(initialItem: _hour);
+  late final FixedExtentScrollController _minuteCtrl =
+      FixedExtentScrollController(initialItem: _minute);
+  late final List<String> _hours;
+  late final List<String> _minutes;
+
+  String _fa(String s) => widget.isFa ? toFaDigits(s) : s;
+  String _two(int n) => n.toString().padLeft(2, '0');
+
+  @override
+  void initState() {
+    super.initState();
+    _hours = [for (int h = 0; h < 24; h++) _fa(_two(h))];
+    _minutes = [for (int m = 0; m < 60; m++) _fa(_two(m))];
+  }
+
+  @override
+  void dispose() {
+    _hourCtrl.dispose();
+    _minuteCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.palette;
+    return Container(
+      decoration: BoxDecoration(
+        color: p.background,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      padding:
+          EdgeInsets.only(bottom: MediaQuery.of(context).padding.bottom + 12),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 40,
+            height: 4,
+            margin: const EdgeInsets.only(top: 10, bottom: 4),
+            decoration: BoxDecoration(
+              color: p.divider,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: Text(widget.isFa ? 'لغو' : 'Cancel',
+                      style: TextStyle(color: p.textSecondary)),
+                ),
+                Text(widget.isFa ? 'زمان' : 'Time',
+                    style: TextStyle(
+                        fontWeight: FontWeight.bold, color: p.textPrimary)),
+                TextButton(
+                  onPressed: () =>
+                      Navigator.pop(context, _hour * 60 + _minute),
+                  child: Text(widget.isFa ? 'تأیید' : 'Done',
+                      style: TextStyle(
+                          color: p.accent, fontWeight: FontWeight.bold)),
+                ),
+              ],
+            ),
+          ),
+          SizedBox(
+            height: 200,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                Container(
+                  height: 40,
+                  margin: const EdgeInsets.symmetric(horizontal: 10),
+                  decoration: BoxDecoration(
+                    color: p.surface,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                Directionality(
+                  textDirection: TextDirection.ltr,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      SizedBox(
+                        width: 80,
+                        child: _timeWheel(_hours, _hourCtrl,
+                            (i) => setState(() => _hour = i)),
+                      ),
+                      Text(':',
+                          style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: p.textSecondary)),
+                      SizedBox(
+                        width: 80,
+                        child: _timeWheel(_minutes, _minuteCtrl,
+                            (i) => setState(() => _minute = i)),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _timeWheel(List<String> labels, FixedExtentScrollController ctrl,
+      ValueChanged<int> onChanged) {
+    final p = context.palette;
+    return ListWheelScrollView.useDelegate(
+      controller: ctrl,
+      itemExtent: 40,
+      perspective: 0.004,
+      diameterRatio: 1.3,
+      physics: const FixedExtentScrollPhysics(),
+      onSelectedItemChanged: onChanged,
+      childDelegate: ListWheelChildBuilderDelegate(
+        childCount: labels.length,
+        builder: (_, i) => Center(
+          child: Text(labels[i],
+              maxLines: 1,
+              style: TextStyle(fontSize: 18, color: p.textPrimary)),
+        ),
+      ),
+    );
+  }
 }

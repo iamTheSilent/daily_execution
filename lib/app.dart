@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
 import 'providers/app_providers.dart';
+import 'providers/settings_providers.dart';
 
 class DailyExecutionApp extends ConsumerWidget {
   const DailyExecutionApp({super.key});
@@ -12,11 +13,14 @@ class DailyExecutionApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final router = ref.watch(appRouterProvider);
+    final themeMode = ref.watch(themeModeProvider);
+    final textScale = ref.watch(fontScaleProvider);
     return MaterialApp.router(
       title: 'Daily Execution',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light(),
       darkTheme: AppTheme.dark(),
+      themeMode: themeMode,
       routerConfig: router,
       locale: ref.watch(localeProvider),
       localizationsDelegates: const [
@@ -25,9 +29,16 @@ class DailyExecutionApp extends ConsumerWidget {
         GlobalCupertinoLocalizations.delegate,
       ],
       supportedLocales: const [Locale('en'), Locale('fa')],
-      builder: (context, child) => kIsWeb
-          ? _PhoneFrame(child: child)
-          : (child ?? const SizedBox.shrink()),
+      builder: (context, child) {
+        final content = kIsWeb
+            ? _PhoneFrame(child: child)
+            : (child ?? const SizedBox.shrink());
+        return MediaQuery(
+          data: MediaQuery.of(context)
+              .copyWith(textScaler: TextScaler.linear(textScale)),
+          child: content,
+        );
+      },
     );
   }
 }

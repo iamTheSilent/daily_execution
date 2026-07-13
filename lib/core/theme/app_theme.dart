@@ -2,27 +2,32 @@ import 'package:flutter/material.dart';
 import 'app_colors.dart';
 
 class AppTheme {
-  static ThemeData light() {
+  static ThemeData light() => _build(AppPalette.light, Brightness.light);
+  static ThemeData dark() => _build(AppPalette.dark, Brightness.dark);
+
+  static ThemeData _build(AppPalette p, Brightness brightness) {
     final scheme = ColorScheme.fromSeed(
-      seedColor: AppColors.accent,
-      brightness: Brightness.light,
+      seedColor: p.accent,
+      brightness: brightness,
     ).copyWith(
-      primary: AppColors.accent,
+      primary: p.accent,
       onPrimary: Colors.white,
-      surface: AppColors.surface,
-      onSurface: AppColors.textPrimary,
-      secondary: AppColors.accent,
+      surface: p.surface,
+      onSurface: p.textPrimary,
+      secondary: p.accent,
     );
 
     return ThemeData(
       useMaterial3: true,
       fontFamily: 'Vazirmatn',
+      brightness: brightness,
       colorScheme: scheme,
-      scaffoldBackgroundColor: AppColors.background,
-      dividerColor: AppColors.divider,
-      appBarTheme: const AppBarTheme(
-        backgroundColor: AppColors.background,
-        foregroundColor: AppColors.textPrimary,
+      scaffoldBackgroundColor: p.background,
+      dividerColor: p.divider,
+      extensions: [p],
+      appBarTheme: AppBarTheme(
+        backgroundColor: p.background,
+        foregroundColor: p.textPrimary,
         elevation: 0,
         scrolledUnderElevation: 0,
         centerTitle: true,
@@ -30,34 +35,34 @@ class AppTheme {
           fontFamily: 'Vazirmatn',
           fontSize: 18,
           fontWeight: FontWeight.bold,
-          color: AppColors.textPrimary,
+          color: p.textPrimary,
         ),
       ),
       cardTheme: CardThemeData(
-        color: AppColors.surface,
+        color: p.surface,
         elevation: 0,
         margin: EdgeInsets.zero,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppColors.cardRadius),
         ),
       ),
-      listTileTheme: const ListTileThemeData(
-        iconColor: AppColors.textSecondary,
+      listTileTheme: ListTileThemeData(
+        iconColor: p.textSecondary,
       ),
-      progressIndicatorTheme: const ProgressIndicatorThemeData(
-        color: AppColors.accent,
-        linearTrackColor: AppColors.progressTrack,
+      progressIndicatorTheme: ProgressIndicatorThemeData(
+        color: p.accent,
+        linearTrackColor: p.progressTrack,
       ),
-      bottomNavigationBarTheme: const BottomNavigationBarThemeData(
-        backgroundColor: AppColors.background,
-        selectedItemColor: AppColors.accent,
-        unselectedItemColor: AppColors.textSecondary,
+      bottomNavigationBarTheme: BottomNavigationBarThemeData(
+        backgroundColor: p.background,
+        selectedItemColor: p.accent,
+        unselectedItemColor: p.textSecondary,
         type: BottomNavigationBarType.fixed,
         elevation: 0,
       ),
       navigationBarTheme: NavigationBarThemeData(
-        backgroundColor: AppColors.background,
-        indicatorColor: AppColors.focusTint,
+        backgroundColor: p.background,
+        indicatorColor: p.focusTint,
         elevation: 0,
       ),
       floatingActionButtonTheme: const FloatingActionButtonThemeData(
@@ -68,12 +73,12 @@ class AppTheme {
         style: ButtonStyle(
           backgroundColor: WidgetStateProperty.resolveWith((states) =>
               states.contains(WidgetState.selected)
-                  ? AppColors.dark
-                  : AppColors.surface),
+                  ? p.segmentActive
+                  : p.surface),
           foregroundColor: WidgetStateProperty.resolveWith((states) =>
               states.contains(WidgetState.selected)
                   ? Colors.white
-                  : AppColors.textPrimary),
+                  : p.textPrimary),
         ),
       ),
       snackBarTheme: const SnackBarThemeData(
@@ -81,7 +86,4 @@ class AppTheme {
       ),
     );
   }
-
-  // طرحِ فیگما روشنه؛ فعلاً تیره هم همون روشن
-  static ThemeData dark() => light();
 }
