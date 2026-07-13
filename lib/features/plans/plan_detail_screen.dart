@@ -41,14 +41,14 @@ class PlanDetailScreen extends ConsumerWidget {
                   children: [
                     Row(children: [
                       Text('${total - done} ${s.remainingLabel}',
-                          style: const TextStyle(
-                              color: AppColors.accent,
+                          style: TextStyle(
+                              color: context.palette.accent,
                               fontWeight: FontWeight.bold,
                               fontSize: 15)),
                       const SizedBox(width: 10),
                       Text('$done/$total ${s.doneLabel}',
-                          style: const TextStyle(
-                              color: AppColors.textSecondary, fontSize: 14)),
+                          style: TextStyle(
+                              color: context.palette.textSecondary, fontSize: 14)),
                     ]),
                     const SizedBox(height: 10),
                     ClipRRect(
@@ -56,9 +56,9 @@ class PlanDetailScreen extends ConsumerWidget {
                       child: LinearProgressIndicator(
                         value: progress,
                         minHeight: 8,
-                        backgroundColor: AppColors.progressTrack,
+                        backgroundColor: context.palette.progressTrack,
                         valueColor:
-                            const AlwaysStoppedAnimation(AppColors.accent),
+                            AlwaysStoppedAnimation(context.palette.accent),
                       ),
                     ),
                   ],
@@ -70,7 +70,7 @@ class PlanDetailScreen extends ConsumerWidget {
                         child: Text(s.emptyPlanTasks,
                             textAlign: TextAlign.center,
                             style:
-                                const TextStyle(color: AppColors.textSecondary)))
+                                TextStyle(color: context.palette.textSecondary)))
                     : ListView.builder(
                         padding: const EdgeInsets.fromLTRB(16, 0, 16, 90),
                         itemCount: tasks.length,
@@ -184,7 +184,7 @@ class _PlanTaskCard extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 5),
       child: Material(
-        color: done ? AppColors.doneBg : AppColors.surface,
+        color: done ? context.palette.doneBg : context.palette.surface,
         borderRadius: BorderRadius.circular(AppColors.cardRadius),
         child: InkWell(
           borderRadius: BorderRadius.circular(AppColors.cardRadius),
@@ -193,7 +193,7 @@ class _PlanTaskCard extends StatelessWidget {
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(AppColors.cardRadius),
               border: overdue
-                  ? Border.all(color: AppColors.red, width: 1.2)
+                  ? Border.all(color: context.palette.red, width: 1.2)
                   : null,
             ),
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
@@ -216,23 +216,23 @@ class _PlanTaskCard extends StatelessWidget {
                             decoration:
                                 done ? TextDecoration.lineThrough : null,
                             color: done
-                                ? AppColors.textSecondary
-                                : AppColors.textPrimary,
+                                ? context.palette.textSecondary
+                                : context.palette.textPrimary,
                           )),
                       if (task.note != null && task.note!.isNotEmpty) ...[
                         const SizedBox(height: 2),
                         Text(task.note!,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                                color: AppColors.textSecondary, fontSize: 13)),
+                            style: TextStyle(
+                                color: context.palette.textSecondary, fontSize: 13)),
                       ],
                     ],
                   ),
                 ),
                 if (overdue)
-                  const Icon(Icons.warning_amber_rounded,
-                      color: AppColors.red, size: 20),
+                  Icon(Icons.warning_amber_rounded,
+                      color: context.palette.red, size: 20),
               ],
             ),
           ),
@@ -249,17 +249,17 @@ class _StatusCircle extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (status == TaskStatus.done) {
-      return const Icon(Icons.check_circle, color: AppColors.green, size: 26);
+      return Icon(Icons.check_circle, color: context.palette.green, size: 26);
     }
     if (status == TaskStatus.doing) {
-      return const SizedBox(
+      return SizedBox(
         width: 24,
         height: 24,
         child: CircularProgressIndicator(
           strokeWidth: 3,
           value: null, // چرخشی (بی‌نهایت) به‌جای ثابت
-          color: AppColors.accent,
-          backgroundColor: AppColors.progressTrack,
+          color: context.palette.accent,
+          backgroundColor: context.palette.progressTrack,
         ),
       );
     }
@@ -268,7 +268,7 @@ class _StatusCircle extends StatelessWidget {
       height: 24,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        border: Border.all(color: AppColors.textSecondary, width: 2),
+        border: Border.all(color: context.palette.textSecondary, width: 2),
       ),
     );
   }
@@ -401,7 +401,7 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
             decoration: BoxDecoration(
-              color: AppColors.surface,
+              color: context.palette.surface,
               borderRadius: BorderRadius.circular(14),
             ),
             child: TextField(
@@ -416,7 +416,7 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
           _label(isFa ? 'زمان' : 'Time'),
           const SizedBox(height: 8),
           Material(
-            color: AppColors.surface,
+            color: context.palette.surface,
             borderRadius: BorderRadius.circular(14),
             child: ListTile(
               shape:
@@ -441,5 +441,5 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
   }
 
   Widget _label(String t) => Text(t,
-      style: const TextStyle(color: AppColors.textSecondary, fontSize: 13));
+      style: TextStyle(color: context.palette.textSecondary, fontSize: 13));
 }

@@ -49,28 +49,28 @@ class TodayScreen extends ConsumerWidget {
                         children: [
                           Text(
                             AppDate.primaryLong(day, mode, faDigits: isFa),
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 24,
                               fontWeight: FontWeight.bold,
                               height: 1.15,
-                              color: AppColors.textPrimary,
+                              color: context.palette.textPrimary,
                             ),
                           ),
                           const SizedBox(height: 2),
                           Text(
                             AppDate.secondaryShort(day, mode, faDigits: isFa),
                             textDirection: TextDirection.ltr,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 12,
-                              color: AppColors.textSecondary,
+                              color: context.palette.textSecondary,
                             ),
                           ),
                         ],
                       ),
                     ),
                     IconButton(
-                      icon: const Icon(Icons.swap_vert,
-                          color: AppColors.textSecondary),
+                      icon: Icon(Icons.swap_vert,
+                          color: context.palette.textSecondary),
                       onPressed: () => _sortSheet(context, ref),
                     ),
                     const SizedBox(width: 2),
@@ -97,9 +97,9 @@ class TodayScreen extends ConsumerWidget {
                         isFa
                             ? 'برای جابه‌جایی بینِ روزها، صفحه را بکش'
                             : 'Swipe sideways to change the day',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 11.5,
-                          color: AppColors.textSecondary,
+                          color: context.palette.textSecondary,
                         ),
                       ),
                     ),
@@ -146,7 +146,7 @@ class TodayScreen extends ConsumerWidget {
   }
 
   Future<void> _quickAdd(BuildContext context, WidgetRef ref) async {
-    final isFa = ref.read(localeProvider).languageCode == 'fa';   // ← این خط جدید
+    final isFa = ref.read(localeProvider).languageCode == 'fa';
     final ctrl = TextEditingController();
     final title = await showModalBottomSheet<String>(
       context: context,
@@ -164,7 +164,7 @@ class TodayScreen extends ConsumerWidget {
               controller: ctrl,
               autofocus: true,
               decoration: InputDecoration(
-                    hintText: isFa ? 'کار جدید…' : 'New task…'),
+                  hintText: isFa ? 'کار جدید…' : 'New task…'),
               onSubmitted: (v) => Navigator.pop(ctx, v),
             ),
           ),
@@ -226,15 +226,15 @@ class _AddButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: AppColors.dark,
+      color: context.palette.textPrimary,
       shape: const CircleBorder(),
       child: InkWell(
         customBorder: const CircleBorder(),
         onTap: onTap,
-        child: const SizedBox(
+        child: SizedBox(
           width: 44,
           height: 44,
-          child: Icon(Icons.add, color: Colors.white, size: 26),
+          child: Icon(Icons.add, color: context.palette.background, size: 26),
         ),
       ),
     );
@@ -249,7 +249,7 @@ class _TodayPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: AppColors.focusTint,
+      color: context.palette.focusTint,
       borderRadius: BorderRadius.circular(20),
       child: InkWell(
         borderRadius: BorderRadius.circular(20),
@@ -257,14 +257,14 @@ class _TodayPill extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           child: Row(mainAxisSize: MainAxisSize.min, children: [
-            const Icon(Icons.today, size: 15, color: AppColors.accent),
+            Icon(Icons.today, size: 15, color: context.palette.accent),
             const SizedBox(width: 5),
             Text(
               isFa ? 'برو به امروز' : 'Today',
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 12.5,
                 fontWeight: FontWeight.w600,
-                color: AppColors.accent,
+                color: context.palette.accent,
               ),
             ),
           ]),
@@ -284,13 +284,13 @@ class _EmptyDay extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.wb_sunny_outlined,
-              size: 44, color: AppColors.textSecondary),
+          Icon(Icons.wb_sunny_outlined,
+              size: 44, color: context.palette.textSecondary),
           const SizedBox(height: 12),
           Text(
             isFa ? 'برای افزودن کار، + را بزن' : 'Tap + to add a task',
             textAlign: TextAlign.center,
-            style: const TextStyle(color: AppColors.textSecondary),
+            style: TextStyle(color: context.palette.textSecondary),
           ),
         ],
       ),

@@ -100,12 +100,12 @@ class _PlansScreenState extends ConsumerState<PlansScreen> {
                 child: ExpansionTile(
                   tilePadding: const EdgeInsets.symmetric(horizontal: 8),
                   childrenPadding: EdgeInsets.zero,
-                  leading: const Icon(Icons.archive_outlined,
-                      color: AppColors.textSecondary),
+                  leading: Icon(Icons.archive_outlined,
+                      color: context.palette.textSecondary),
                   title: Text(
                     '${s.archivedSection} (${s.number(archived.length)})',
-                    style: const TextStyle(
-                        color: AppColors.textSecondary,
+                    style: TextStyle(
+                        color: context.palette.textSecondary,
                         fontWeight: FontWeight.w600),
                   ),
                   children:
@@ -218,10 +218,10 @@ class _PlansScreenState extends ConsumerState<PlansScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
-              leading: const Icon(Icons.bolt, color: AppColors.accent),
+              leading: Icon(Icons.bolt, color: context.palette.accent),
               title: Text(s.convertToPlan,
-                  style: const TextStyle(
-                      color: AppColors.accent, fontWeight: FontWeight.w600)),
+                  style: TextStyle(
+                      color: context.palette.accent, fontWeight: FontWeight.w600)),
               onTap: () {
                 Navigator.pop(sheetCtx);
                 _ideaToNewPlan(idea, s);
@@ -519,10 +519,10 @@ class _PlanTile extends StatelessWidget {
       child: Card(
         margin: const EdgeInsets.symmetric(vertical: 6),
         elevation: 0,
-        color: AppColors.surface,
+        color: context.palette.surface,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(18),
-          side: const BorderSide(color: AppColors.divider),
+          side: BorderSide(color: context.palette.divider),
         ),
         child: InkWell(
           borderRadius: BorderRadius.circular(18),
@@ -536,8 +536,8 @@ class _PlanTile extends StatelessWidget {
                   Text(plan.icon ?? '📋', style: const TextStyle(fontSize: 22)),
                   const SizedBox(width: 10),
                   if (plan.pinned) ...[
-                    const Icon(Icons.push_pin,
-                        size: 15, color: AppColors.accent),
+                    Icon(Icons.push_pin,
+                        size: 15, color: context.palette.accent),
                     const SizedBox(width: 4),
                   ],
                   Expanded(
@@ -551,16 +551,16 @@ class _PlanTile extends StatelessWidget {
                         decoration:
                             completed ? TextDecoration.lineThrough : null,
                         color: completed
-                            ? AppColors.textSecondary
-                            : AppColors.textPrimary,
+                            ? context.palette.textSecondary
+                            : context.palette.textPrimary,
                       ),
                     ),
                   ),
                   if (completed)
-                    const Padding(
+                    Padding(
                       padding: EdgeInsets.only(left: 4),
                       child: Icon(Icons.check_circle,
-                          size: 20, color: AppColors.green),
+                          size: 20, color: context.palette.green),
                     ),
                   if (item.dueCount > 0)
                     Container(
@@ -568,7 +568,7 @@ class _PlanTile extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 7, vertical: 2),
                       decoration: BoxDecoration(
-                        color: AppColors.red,
+                        color: context.palette.red,
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: Text(
@@ -580,8 +580,8 @@ class _PlanTile extends StatelessWidget {
                       ),
                     ),
                   PopupMenuButton<String>(
-                    icon: const Icon(Icons.more_horiz,
-                        color: AppColors.textSecondary),
+                    icon: Icon(Icons.more_horiz,
+                        color: context.palette.textSecondary),
                     onSelected: (v) {
                       switch (v) {
                         case 'pin':
@@ -624,16 +624,16 @@ class _PlanTile extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(
                         horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
-                      color: AppColors.red.withOpacity(0.12),
+                      color: context.palette.red.withOpacity(0.12),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Row(mainAxisSize: MainAxisSize.min, children: [
-                      const Icon(Icons.error_outline,
-                          size: 13, color: AppColors.red),
+                      Icon(Icons.error_outline,
+                          size: 13, color: context.palette.red),
                       const SizedBox(width: 4),
                       Text(strings.overdueLabel,
-                          style: const TextStyle(
-                              color: AppColors.red,
+                          style: TextStyle(
+                              color: context.palette.red,
                               fontSize: 12,
                               fontWeight: FontWeight.w600)),
                     ]),
@@ -642,15 +642,15 @@ class _PlanTile extends StatelessWidget {
                 const SizedBox(height: 12),
                 Row(children: [
                   Text('${strings.number(item.remaining)} ${strings.remainingLabel}',
-                      style: const TextStyle(
-                          color: AppColors.accent,
+                      style: TextStyle(
+                          color: context.palette.accent,
                           fontWeight: FontWeight.bold,
                           fontSize: 13)),
                   const SizedBox(width: 10),
                   Text(
                       '${strings.number(item.done)}/${strings.number(item.total)} ${strings.doneLabel}',
-                      style: const TextStyle(
-                          color: AppColors.textSecondary, fontSize: 13)),
+                      style: TextStyle(
+                          color: context.palette.textSecondary, fontSize: 13)),
                 ]),
                 const SizedBox(height: 8),
                 ClipRRect(
@@ -658,9 +658,9 @@ class _PlanTile extends StatelessWidget {
                   child: LinearProgressIndicator(
                     value: item.progress,
                     minHeight: 8,
-                    backgroundColor: AppColors.progressTrack,
+                    backgroundColor: context.palette.progressTrack,
                     valueColor: AlwaysStoppedAnimation(
-                        completed ? AppColors.green : AppColors.accent),
+                        completed ? context.palette.green : context.palette.accent),
                   ),
                 ),
               ],
@@ -703,7 +703,7 @@ class _IdeaTile extends StatelessWidget {
           idea.title,
           style: TextStyle(
             decoration: isDone ? TextDecoration.lineThrough : null,
-            color: isDone ? AppColors.textSecondary : null,
+            color: isDone ? context.palette.textSecondary : null,
           ),
         ),
         subtitle: (idea.note == null || idea.note!.isEmpty)
@@ -726,12 +726,12 @@ class _StatusCircle extends StatelessWidget {
   Widget build(BuildContext context) {
     switch (status) {
       case TaskStatus.done:
-        return const Icon(Icons.check_circle, color: AppColors.green);
+        return Icon(Icons.check_circle, color: context.palette.green);
       case TaskStatus.doing:
-        return const Icon(Icons.radio_button_checked, color: AppColors.accent);
+        return Icon(Icons.radio_button_checked, color: context.palette.accent);
       case TaskStatus.todo:
-        return const Icon(Icons.radio_button_unchecked,
-            color: AppColors.textSecondary);
+        return Icon(Icons.radio_button_unchecked,
+            color: context.palette.textSecondary);
     }
   }
 }
