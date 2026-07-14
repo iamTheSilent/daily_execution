@@ -20,6 +20,8 @@ class Tasks extends Table {
   RealColumn get orderKey => real().withDefault(const Constant(0))();
   DateTimeColumn get createdAt => dateTime()();
   DateTimeColumn get updatedAt => dateTime()();
+  // Completion time for stats. Set only when status == done.
+  DateTimeColumn get completedAt => dateTime().nullable()();
 
   @override
   Set<Column> get primaryKey => {id};
@@ -29,6 +31,8 @@ class Plans extends Table {
   TextColumn get id => text()();
   TextColumn get name => text()();
   TextColumn get icon => text().nullable()(); // ← ایموجیِ برنامه
+  // Optional short description shown under the plan name.
+  TextColumn get description => text().nullable()();
   DateTimeColumn get startDate => dateTime().nullable()();
   DateTimeColumn get endDate => dateTime().nullable()();
   BoolColumn get pinned =>

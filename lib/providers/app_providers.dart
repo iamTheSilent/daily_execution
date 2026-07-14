@@ -57,20 +57,23 @@ class PlanRepository {
   /// بجِ پایینِ تبِ برنامه‌ها: تسک‌هایی که موعدشون امروز یا قبل‌تره و انجام نشده
   Stream<int> watchDueBadge() => _db.watchPlanBadgeCount();
 
-  Future<void> createPlan(String name, {String? icon}) async {
+  Future<void> createPlan(String name,
+      {String? icon, String? description}) async {
     final now = DateTime.now();
     await _db.upsertPlan(PlansCompanion.insert(
       id: _uuid.v4(),
       name: name,
       icon: Value(icon),
+      description: Value(description),
       orderKey: Value(now.millisecondsSinceEpoch.toDouble()),
       createdAt: now,
       updatedAt: now,
     ));
   }
 
-  Future<void> updatePlan(String id, {required String name, String? icon}) =>
-      _db.updatePlan(id, name: name, icon: icon);
+  Future<void> updatePlan(String id,
+          {required String name, String? icon, String? description}) =>
+      _db.updatePlan(id, name: name, icon: icon, description: description);
 
   Future<void> setPinned(String id, bool pinned) =>
       _db.setPlanPinned(id, pinned);

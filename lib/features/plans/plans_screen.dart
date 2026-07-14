@@ -137,16 +137,18 @@ class _PlansScreenState extends ConsumerState<PlansScreen> {
   Future<void> _addPlan(AppStrings s) async {
     final res = await _planSheet(context, s);
     if (res == null) return;
-    await ref.read(planRepositoryProvider).createPlan(res.name, icon: res.icon);
+    await ref.read(planRepositoryProvider).createPlan(res.name,
+        icon: res.icon, description: res.description);
   }
 
   Future<void> _editPlan(Plan plan, AppStrings s) async {
     final res = await _planSheet(context, s,
-        initialName: plan.name, initialIcon: plan.icon);
+        initialName: plan.name,
+        initialIcon: plan.icon,
+        initialDescription: plan.description);
     if (res == null) return;
-    await ref
-        .read(planRepositoryProvider)
-        .updatePlan(plan.id, name: res.name, icon: res.icon);
+    await ref.read(planRepositoryProvider).updatePlan(plan.id,
+        name: res.name, icon: res.icon, description: res.description);
   }
 
   Future<void> _deletePlan(Plan plan, AppStrings s) async {
@@ -402,12 +404,16 @@ class _PlansScreenState extends ConsumerState<PlansScreen> {
     );
   }
 
-  // شیتِ برنامه (ایموجی + اسم)
-  Future<({String name, String? icon})?> _planSheet(
+  // شیتِ برنامه (ایموجی + اسم + توضیحات)
+  Future<({String name, String? icon, String? description})?> _planSheet(
       BuildContext ctx, AppStrings s,
-      {String initialName = '', String? initialIcon}) {
+      {String initialName = '',
+      String? initialIcon,
+      String? initialDescription}) {
     final nameCtrl = TextEditingController(text: initialName);
     final iconCtrl = TextEditingController(text: initialIcon ?? '');
+    final descCtrl = TextEditingController(text: initialDescription ?? '');
+    final isFa = ref.read(localeProvider).languageCode == 'fa';
 
     void submit(BuildContext sheetCtx) {
       final n = nameCtrl.text.trim();
@@ -416,10 +422,15 @@ class _PlansScreenState extends ConsumerState<PlansScreen> {
         return;
       }
       final ic = iconCtrl.text.trim();
-      Navigator.pop(sheetCtx, (name: n, icon: ic.isEmpty ? null : ic));
+      final desc = descCtrl.text.trim();
+      Navigator.pop(sheetCtx, (
+        name: n,
+        icon: ic.isEmpty ? null : ic,
+        description: desc.isEmpty ? null : desc,
+      ));
     }
 
-    return showModalBottomSheet<({String name, String? icon})>(
+    return showModalBottomSheet<({String name, String? icon, String? description})>(
       context: ctx,
       isScrollControlled: true,
       builder: (sheetCtx) => Padding(
@@ -427,35 +438,51 @@ class _PlansScreenState extends ConsumerState<PlansScreen> {
           bottom: MediaQuery.of(sheetCtx).viewInsets.bottom,
           left: 16, right: 16, top: 16,
         ),
-        child: Row(children: [
-          SizedBox(
-            width: 56,
-            child: TextField(
-              controller: iconCtrl,
-              textAlign: TextAlign.center,
-              maxLength: 2,
-              buildCounter: (_,
-                      {required int currentLength,
-                      required bool isFocused,
-                      int? maxLength}) =>
-                  null,
-              decoration: const InputDecoration(hintText: '📋'),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(children: [
+              SizedBox(
+                width: 56,
+                child: TextField(
+                  controller: iconCtrl,
+                  textAlign: TextAlign.center,
+                  maxLength: 2,
+                  buildCounter: (_,
+                          {required int currentLength,
+                          required bool isFocused,
+                          int? maxLength}) =>
+                      null,
+                  decoration: const InputDecoration(hintText: '📋'),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: TextField(
+                  controller: nameCtrl,
+                  autofocus: true,
+                  decoration: InputDecoration(hintText: s.newPlanHint),
+                  onSubmitted: (_) => submit(sheetCtx),
+                ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.check),
+                onPressed: () => submit(sheetCtx),
+              ),
+            ]),
+            TextField(
+              controller: descCtrl,
+              minLines: 1,
+              maxLines: null,
+              textInputAction: TextInputAction.newline,
+              decoration: InputDecoration(
+                hintText:
+                    isFa ? 'توضیحات (اختیاری)' : 'Description (optional)',
+              ),
             ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: TextField(
-              controller: nameCtrl,
-              autofocus: true,
-              decoration: InputDecoration(hintText: s.newPlanHint),
-              onSubmitted: (_) => submit(sheetCtx),
-            ),
-          ),
-          IconButton(
-            icon: const Icon(Icons.check),
-            onPressed: () => submit(sheetCtx),
-          ),
-        ]),
+            const SizedBox(height: 8),
+          ],
+        ),
       ),
     );
   }
@@ -623,6 +650,17 @@ class _PlanTile extends StatelessWidget {
                     ],
                   ),
                 ]),
+                if (plan.description != null &&
+                    plan.description!.isNotEmpty) ...[
+                  const SizedBox(height: 6),
+                  Text(
+                    plan.description!,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                        color: context.palette.textSecondary, fontSize: 13),
+                  ),
+                ],
                 if (overdue) ...[
                   const SizedBox(height: 8),
                   Container(

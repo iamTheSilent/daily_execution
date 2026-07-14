@@ -33,7 +33,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(openConnection());
 
   @override
-  int get schemaVersion => 5;
+  int get schemaVersion => 6;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -52,6 +52,10 @@ class AppDatabase extends _$AppDatabase {
           if (from < 5) {
             await m.addColumn(plans, plans.pinned);
             await m.addColumn(plans, plans.archived);
+          }
+          if (from < 6) {
+            await m.addColumn(tasks, tasks.completedAt);
+            await m.addColumn(plans, plans.description);
           }
         },
       );
@@ -108,6 +112,9 @@ class AppDatabase extends _$AppDatabase {
       (update(tasks)..where((t) => t.id.equals(id))).write(
         TasksCompanion(
           status: Value(status),
+          // Record completion time for stats; cleared when leaving done.
+          completedAt:
+              Value(status == TaskStatus.done ? DateTime.now() : null),
           updatedAt: Value(DateTime.now()),
         ),
       );
@@ -175,11 +182,13 @@ class AppDatabase extends _$AppDatabase {
       );
 
   /// به‌روزرسانیِ نام + ایموجیِ برنامه
-  Future<void> updatePlan(String id, {required String name, String? icon}) =>
+  Future<void> updatePlan(String id,
+          {required String name, String? icon, String? description}) =>
       (update(plans)..where((p) => p.id.equals(id))).write(
         PlansCompanion(
           name: Value(name),
           icon: Value(icon),
+          description: Value(description),
           updatedAt: Value(DateTime.now()),
         ),
       );

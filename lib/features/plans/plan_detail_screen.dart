@@ -310,6 +310,11 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
     final title = _titleCtrl.text.trim();
     if (title.isEmpty) return;
     final note = _noteCtrl.text.trim();
+    // Keep the original completion time if it was already done, set now when
+    // newly completed, and clear it when moved out of the done state.
+    final completedAt = _status == TaskStatus.done
+        ? (widget.task.completedAt ?? DateTime.now())
+        : null;
     await ref.read(databaseProvider).updateTaskFields(
           widget.task.id,
           TasksCompanion(
@@ -317,6 +322,7 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
             note: Value(note.isEmpty ? null : note),
             dueDate: Value(_dueDate),
             status: Value(_status),
+            completedAt: Value(completedAt),
             updatedAt: Value(DateTime.now()),
           ),
         );
