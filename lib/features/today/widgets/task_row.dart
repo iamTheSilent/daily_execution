@@ -71,6 +71,20 @@ class TaskRow extends StatelessWidget {
                           ),
                         ),
                       ],
+                      // Show the note (description) under the task in a
+                      // smaller, muted font, only when it exists.
+                      if (task.note != null && task.note!.isNotEmpty) ...[
+                        const SizedBox(height: 3),
+                        Text(
+                          task.note!,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 12.5,
+                            color: p.textSecondary,
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                 ),

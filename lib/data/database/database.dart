@@ -253,4 +253,16 @@ class AppDatabase extends _$AppDatabase {
     ));
     await (delete(ideaFolders)..where((f) => f.id.equals(folderId))).go();
   }
+
+  // ─── Danger zone ───
+
+  /// پاک‌کردنِ کاملِ داده‌ها: تسک‌ها، برنامه‌ها و ایده‌ها. قابلِ بازگشت نیست.
+  Future<void> clearAllData() async {
+    await transaction(() async {
+      await delete(tasks).go();
+      await delete(plans).go();
+      await delete(ideaItems).go();
+      await delete(ideaFolders).go();
+    });
+  }
 }

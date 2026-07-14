@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:drift/drift.dart' show Value;
 import 'package:uuid/uuid.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../core/l10n/app_strings.dart';
 import '../data/database/database.dart';
 import '../data/database/tables.dart';
@@ -9,7 +10,28 @@ import '../data/repositories/task_repository.dart';
 import '../domain/task_logic.dart';
 
 // ── زبان و متن‌ها ──
-final localeProvider = StateProvider<Locale>((ref) => const Locale('fa'));
+// زبانِ انتخاب‌شده در SharedPreferences ذخیره می‌شود تا با ری‌استارت نپرد.
+class LocaleNotifier extends StateNotifier<Locale> {
+  LocaleNotifier() : super(const Locale('fa')) {
+    _load();
+  }
+  static const _key = 'settings.locale';
+
+  Future<void> _load() async {
+    final prefs = await SharedPreferences.getInstance();
+    final code = prefs.getString(_key);
+    if (code != null) state = Locale(code);
+  }
+
+  Future<void> set(Locale locale) async {
+    state = locale;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_key, locale.languageCode);
+  }
+}
+
+final localeProvider =
+    StateNotifierProvider<LocaleNotifier, Locale>((ref) => LocaleNotifier());
 
 final appStringsProvider =
     Provider<AppStrings>((ref) => AppStrings(ref.watch(localeProvider)));

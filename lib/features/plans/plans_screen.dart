@@ -283,8 +283,13 @@ class _PlansScreenState extends ConsumerState<PlansScreen> {
 
   // ۲) افزودن به یکی از برنامه‌های موجود (لیستِ اسکرولی، بدونِ بایگانی‌شده‌ها)
   Future<void> _ideaToExistingPlan(Task idea, AppStrings s) async {
-    final plans = (ref.read(plansProvider).valueOrNull ?? const <Plan>[])
-        .where((p) => !p.archived)
+    // NOTE: read the live plansWithProgressProvider (kept alive by the Plans
+    // tab via IndexedStack). Reading the cold plansProvider returned null the
+    // first time, which made it look like there were no plans.
+    final plans = (ref.read(plansWithProgressProvider).valueOrNull ??
+            const <PlanWithProgress>[])
+        .where((e) => !e.plan.archived)
+        .map((e) => e.plan)
         .toList();
     if (plans.isEmpty) {
       ScaffoldMessenger.of(context)

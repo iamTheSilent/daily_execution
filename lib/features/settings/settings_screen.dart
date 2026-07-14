@@ -35,6 +35,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   Widget build(BuildContext context) {
     final s = ref.watch(appStringsProvider);
     final locale = ref.watch(localeProvider);
+    final fa = locale.languageCode == 'fa';
     final mode = ref.watch(calendarModeProvider);
     final themeMode = ref.watch(themeModeProvider);
     final fontSize = ref.watch(fontSizeProvider);
@@ -105,7 +106,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               ],
               selected: {locale.languageCode},
               onSelectionChanged: (v) =>
-                  ref.read(localeProvider.notifier).state = Locale(v.first),
+                  ref.read(localeProvider.notifier).set(Locale(v.first)),
             ),
             const SizedBox(height: 20),
             _label(s.calendarSystem),
@@ -121,7 +122,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               ],
               selected: {mode},
               onSelectionChanged: (v) =>
-                  ref.read(calendarModeProvider.notifier).state = v.first,
+                  ref.read(calendarModeProvider.notifier).set(v.first),
             ),
             const SizedBox(height: 28),
 
@@ -206,11 +207,68 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         TextStyle(color: p.textSecondary, fontSize: 12)),
               ),
             ),
+            const SizedBox(height: 28),
+
+            // ── پاک‌کردنِ داده‌ها ──
+            _section(fa ? 'پاک‌کردنِ داده‌ها' : 'Clear data'),
+            _card(
+              p,
+              child: ListTile(
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14)),
+                leading: Icon(Icons.delete_outline, color: p.red),
+                title: Text(
+                  fa ? 'پاک‌کردنِ همه‌ی داده‌ها' : 'Erase all data',
+                  style:
+                      TextStyle(color: p.red, fontWeight: FontWeight.w600),
+                ),
+                subtitle: Text(
+                  fa
+                      ? 'تمامِ تسک‌ها، برنامه‌ها و ایده‌ها برای همیشه پاک می‌شوند.'
+                      : 'All tasks, plans and ideas will be permanently deleted.',
+                  style: TextStyle(color: p.textSecondary, fontSize: 12),
+                ),
+                onTap: () => _confirmClearData(fa),
+              ),
+            ),
             const SizedBox(height: 40),
           ],
         ),
       ),
     );
+  }
+
+  Future<void> _confirmClearData(bool fa) async {
+    final p = context.palette;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(fa ? 'پاک‌کردنِ همه‌ی داده‌ها؟' : 'Erase all data?'),
+        content: Text(fa
+            ? 'این کار قابلِ بازگشت نیست. همه‌ی تسک‌ها، برنامه‌ها و ایده‌ها حذف می‌شوند.'
+            : 'This cannot be undone. All tasks, plans and ideas will be removed.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(fa ? 'انصراف' : 'Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: TextButton.styleFrom(foregroundColor: p.red),
+            child: Text(fa ? 'پاک کن' : 'Erase'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    await ref.read(databaseProvider).clearAllData();
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(
+        content: Text(fa ? 'همه‌ی داده‌ها پاک شد.' : 'All data cleared.'),
+        duration: const Duration(milliseconds: 1500),
+      ));
   }
 
   Widget _card(AppPalette p, {required Widget child}) => Material(

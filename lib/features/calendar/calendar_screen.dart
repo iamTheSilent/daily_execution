@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shamsi_date/shamsi_date.dart';
+import 'package:go_router/go_router.dart';
 import '../../core/date/app_date.dart';
 import '../../core/theme/app_colors.dart';
 import '../../data/database/database.dart';
@@ -284,7 +285,14 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
             false;
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
-      onTap: () => setState(() => _selected = _norm(day)),
+      onTap: () {
+        // Tapping a day opens the full "Today" screen for that date:
+        // update the shared selected-day, then switch to the Today tab.
+        final DateTime normalized = _norm(day);
+        setState(() => _selected = normalized);
+        ref.read(selectedDayProvider.notifier).state = normalized;
+        context.go('/today');
+      },
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 6),
         child: Column(

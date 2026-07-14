@@ -1,12 +1,38 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:shamsi_date/shamsi_date.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 enum CalendarMode { shamsi, gregorian }
 
-/// حالت فعلی تقویم (پیش‌فرض: شمسی).
+/// حالت فعلی تقویم (پیش‌فرض: شمسی) — با ماندگاری در SharedPreferences.
+class CalendarModeNotifier extends StateNotifier<CalendarMode> {
+  CalendarModeNotifier() : super(CalendarMode.shamsi) {
+    _load();
+  }
+  static const _key = 'settings.calendarMode';
+
+  Future<void> _load() async {
+    final prefs = await SharedPreferences.getInstance();
+    final v = prefs.getString(_key);
+    if (v != null) {
+      state = CalendarMode.values.firstWhere(
+        (e) => e.name == v,
+        orElse: () => CalendarMode.shamsi,
+      );
+    }
+  }
+
+  Future<void> set(CalendarMode mode) async {
+    state = mode;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_key, mode.name);
+  }
+}
+
 final calendarModeProvider =
-    StateProvider<CalendarMode>((ref) => CalendarMode.shamsi);
+    StateNotifierProvider<CalendarModeNotifier, CalendarMode>(
+        (ref) => CalendarModeNotifier());
 
 /// تبدیل ارقام انگلیسی به فارسی
 String toFaDigits(String input) {
