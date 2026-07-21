@@ -100,6 +100,12 @@ class $TasksTable extends Tasks with TableInfo<$TasksTable, Task> {
   late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
       'updated_at', aliasedName, false,
       type: DriftSqlType.dateTime, requiredDuringInsert: true);
+  static const VerificationMeta _completedAtMeta =
+      const VerificationMeta('completedAt');
+  @override
+  late final GeneratedColumn<DateTime> completedAt = GeneratedColumn<DateTime>(
+      'completed_at', aliasedName, true,
+      type: DriftSqlType.dateTime, requiredDuringInsert: false);
   @override
   List<GeneratedColumn> get $columns => [
         id,
@@ -116,7 +122,8 @@ class $TasksTable extends Tasks with TableInfo<$TasksTable, Task> {
         note,
         orderKey,
         createdAt,
-        updatedAt
+        updatedAt,
+        completedAt
       ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -191,6 +198,12 @@ class $TasksTable extends Tasks with TableInfo<$TasksTable, Task> {
     } else if (isInserting) {
       context.missing(_updatedAtMeta);
     }
+    if (data.containsKey('completed_at')) {
+      context.handle(
+          _completedAtMeta,
+          completedAt.isAcceptableOrUnknown(
+              data['completed_at']!, _completedAtMeta));
+    }
     return context;
   }
 
@@ -230,6 +243,8 @@ class $TasksTable extends Tasks with TableInfo<$TasksTable, Task> {
           .read(DriftSqlType.dateTime, data['${effectivePrefix}created_at'])!,
       updatedAt: attachedDatabase.typeMapping
           .read(DriftSqlType.dateTime, data['${effectivePrefix}updated_at'])!,
+      completedAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}completed_at']),
     );
   }
 
@@ -260,6 +275,7 @@ class Task extends DataClass implements Insertable<Task> {
   final double orderKey;
   final DateTime createdAt;
   final DateTime updatedAt;
+  final DateTime? completedAt;
   const Task(
       {required this.id,
       required this.title,
@@ -275,7 +291,8 @@ class Task extends DataClass implements Insertable<Task> {
       this.note,
       required this.orderKey,
       required this.createdAt,
-      required this.updatedAt});
+      required this.updatedAt,
+      this.completedAt});
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
@@ -312,6 +329,9 @@ class Task extends DataClass implements Insertable<Task> {
     map['order_key'] = Variable<double>(orderKey);
     map['created_at'] = Variable<DateTime>(createdAt);
     map['updated_at'] = Variable<DateTime>(updatedAt);
+    if (!nullToAbsent || completedAt != null) {
+      map['completed_at'] = Variable<DateTime>(completedAt);
+    }
     return map;
   }
 
@@ -341,6 +361,9 @@ class Task extends DataClass implements Insertable<Task> {
       orderKey: Value(orderKey),
       createdAt: Value(createdAt),
       updatedAt: Value(updatedAt),
+      completedAt: completedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(completedAt),
     );
   }
 
@@ -365,6 +388,7 @@ class Task extends DataClass implements Insertable<Task> {
       orderKey: serializer.fromJson<double>(json['orderKey']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+      completedAt: serializer.fromJson<DateTime?>(json['completedAt']),
     );
   }
   @override
@@ -388,6 +412,7 @@ class Task extends DataClass implements Insertable<Task> {
       'orderKey': serializer.toJson<double>(orderKey),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
+      'completedAt': serializer.toJson<DateTime?>(completedAt),
     };
   }
 
@@ -406,7 +431,8 @@ class Task extends DataClass implements Insertable<Task> {
           Value<String?> note = const Value.absent(),
           double? orderKey,
           DateTime? createdAt,
-          DateTime? updatedAt}) =>
+          DateTime? updatedAt,
+          Value<DateTime?> completedAt = const Value.absent()}) =>
       Task(
         id: id ?? this.id,
         title: title ?? this.title,
@@ -424,6 +450,7 @@ class Task extends DataClass implements Insertable<Task> {
         orderKey: orderKey ?? this.orderKey,
         createdAt: createdAt ?? this.createdAt,
         updatedAt: updatedAt ?? this.updatedAt,
+        completedAt: completedAt.present ? completedAt.value : this.completedAt,
       );
   Task copyWithCompanion(TasksCompanion data) {
     return Task(
@@ -444,6 +471,8 @@ class Task extends DataClass implements Insertable<Task> {
       orderKey: data.orderKey.present ? data.orderKey.value : this.orderKey,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+      completedAt:
+          data.completedAt.present ? data.completedAt.value : this.completedAt,
     );
   }
 
@@ -464,7 +493,8 @@ class Task extends DataClass implements Insertable<Task> {
           ..write('note: $note, ')
           ..write('orderKey: $orderKey, ')
           ..write('createdAt: $createdAt, ')
-          ..write('updatedAt: $updatedAt')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('completedAt: $completedAt')
           ..write(')'))
         .toString();
   }
@@ -485,7 +515,8 @@ class Task extends DataClass implements Insertable<Task> {
       note,
       orderKey,
       createdAt,
-      updatedAt);
+      updatedAt,
+      completedAt);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -504,7 +535,8 @@ class Task extends DataClass implements Insertable<Task> {
           other.note == this.note &&
           other.orderKey == this.orderKey &&
           other.createdAt == this.createdAt &&
-          other.updatedAt == this.updatedAt);
+          other.updatedAt == this.updatedAt &&
+          other.completedAt == this.completedAt);
 }
 
 class TasksCompanion extends UpdateCompanion<Task> {
@@ -523,6 +555,7 @@ class TasksCompanion extends UpdateCompanion<Task> {
   final Value<double> orderKey;
   final Value<DateTime> createdAt;
   final Value<DateTime> updatedAt;
+  final Value<DateTime?> completedAt;
   final Value<int> rowid;
   const TasksCompanion({
     this.id = const Value.absent(),
@@ -540,6 +573,7 @@ class TasksCompanion extends UpdateCompanion<Task> {
     this.orderKey = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
+    this.completedAt = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   TasksCompanion.insert({
@@ -558,6 +592,7 @@ class TasksCompanion extends UpdateCompanion<Task> {
     this.orderKey = const Value.absent(),
     required DateTime createdAt,
     required DateTime updatedAt,
+    this.completedAt = const Value.absent(),
     this.rowid = const Value.absent(),
   })  : id = Value(id),
         title = Value(title),
@@ -580,6 +615,7 @@ class TasksCompanion extends UpdateCompanion<Task> {
     Expression<double>? orderKey,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? updatedAt,
+    Expression<DateTime>? completedAt,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -598,6 +634,7 @@ class TasksCompanion extends UpdateCompanion<Task> {
       if (orderKey != null) 'order_key': orderKey,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
+      if (completedAt != null) 'completed_at': completedAt,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -618,6 +655,7 @@ class TasksCompanion extends UpdateCompanion<Task> {
       Value<double>? orderKey,
       Value<DateTime>? createdAt,
       Value<DateTime>? updatedAt,
+      Value<DateTime?>? completedAt,
       Value<int>? rowid}) {
     return TasksCompanion(
       id: id ?? this.id,
@@ -635,6 +673,7 @@ class TasksCompanion extends UpdateCompanion<Task> {
       orderKey: orderKey ?? this.orderKey,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      completedAt: completedAt ?? this.completedAt,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -689,6 +728,9 @@ class TasksCompanion extends UpdateCompanion<Task> {
     if (updatedAt.present) {
       map['updated_at'] = Variable<DateTime>(updatedAt.value);
     }
+    if (completedAt.present) {
+      map['completed_at'] = Variable<DateTime>(completedAt.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -713,6 +755,7 @@ class TasksCompanion extends UpdateCompanion<Task> {
           ..write('orderKey: $orderKey, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
+          ..write('completedAt: $completedAt, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -738,6 +781,12 @@ class $PlansTable extends Plans with TableInfo<$PlansTable, Plan> {
   @override
   late final GeneratedColumn<String> icon = GeneratedColumn<String>(
       'icon', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _descriptionMeta =
+      const VerificationMeta('description');
+  @override
+  late final GeneratedColumn<String> description = GeneratedColumn<String>(
+      'description', aliasedName, true,
       type: DriftSqlType.string, requiredDuringInsert: false);
   static const VerificationMeta _startDateMeta =
       const VerificationMeta('startDate');
@@ -795,6 +844,7 @@ class $PlansTable extends Plans with TableInfo<$PlansTable, Plan> {
         id,
         name,
         icon,
+        description,
         startDate,
         endDate,
         pinned,
@@ -827,6 +877,12 @@ class $PlansTable extends Plans with TableInfo<$PlansTable, Plan> {
     if (data.containsKey('icon')) {
       context.handle(
           _iconMeta, icon.isAcceptableOrUnknown(data['icon']!, _iconMeta));
+    }
+    if (data.containsKey('description')) {
+      context.handle(
+          _descriptionMeta,
+          description.isAcceptableOrUnknown(
+              data['description']!, _descriptionMeta));
     }
     if (data.containsKey('start_date')) {
       context.handle(_startDateMeta,
@@ -875,6 +931,8 @@ class $PlansTable extends Plans with TableInfo<$PlansTable, Plan> {
           .read(DriftSqlType.string, data['${effectivePrefix}name'])!,
       icon: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}icon']),
+      description: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}description']),
       startDate: attachedDatabase.typeMapping
           .read(DriftSqlType.dateTime, data['${effectivePrefix}start_date']),
       endDate: attachedDatabase.typeMapping
@@ -902,6 +960,7 @@ class Plan extends DataClass implements Insertable<Plan> {
   final String id;
   final String name;
   final String? icon;
+  final String? description;
   final DateTime? startDate;
   final DateTime? endDate;
   final bool pinned;
@@ -913,6 +972,7 @@ class Plan extends DataClass implements Insertable<Plan> {
       {required this.id,
       required this.name,
       this.icon,
+      this.description,
       this.startDate,
       this.endDate,
       required this.pinned,
@@ -927,6 +987,9 @@ class Plan extends DataClass implements Insertable<Plan> {
     map['name'] = Variable<String>(name);
     if (!nullToAbsent || icon != null) {
       map['icon'] = Variable<String>(icon);
+    }
+    if (!nullToAbsent || description != null) {
+      map['description'] = Variable<String>(description);
     }
     if (!nullToAbsent || startDate != null) {
       map['start_date'] = Variable<DateTime>(startDate);
@@ -947,6 +1010,9 @@ class Plan extends DataClass implements Insertable<Plan> {
       id: Value(id),
       name: Value(name),
       icon: icon == null && nullToAbsent ? const Value.absent() : Value(icon),
+      description: description == null && nullToAbsent
+          ? const Value.absent()
+          : Value(description),
       startDate: startDate == null && nullToAbsent
           ? const Value.absent()
           : Value(startDate),
@@ -968,6 +1034,7 @@ class Plan extends DataClass implements Insertable<Plan> {
       id: serializer.fromJson<String>(json['id']),
       name: serializer.fromJson<String>(json['name']),
       icon: serializer.fromJson<String?>(json['icon']),
+      description: serializer.fromJson<String?>(json['description']),
       startDate: serializer.fromJson<DateTime?>(json['startDate']),
       endDate: serializer.fromJson<DateTime?>(json['endDate']),
       pinned: serializer.fromJson<bool>(json['pinned']),
@@ -984,6 +1051,7 @@ class Plan extends DataClass implements Insertable<Plan> {
       'id': serializer.toJson<String>(id),
       'name': serializer.toJson<String>(name),
       'icon': serializer.toJson<String?>(icon),
+      'description': serializer.toJson<String?>(description),
       'startDate': serializer.toJson<DateTime?>(startDate),
       'endDate': serializer.toJson<DateTime?>(endDate),
       'pinned': serializer.toJson<bool>(pinned),
@@ -998,6 +1066,7 @@ class Plan extends DataClass implements Insertable<Plan> {
           {String? id,
           String? name,
           Value<String?> icon = const Value.absent(),
+          Value<String?> description = const Value.absent(),
           Value<DateTime?> startDate = const Value.absent(),
           Value<DateTime?> endDate = const Value.absent(),
           bool? pinned,
@@ -1009,6 +1078,7 @@ class Plan extends DataClass implements Insertable<Plan> {
         id: id ?? this.id,
         name: name ?? this.name,
         icon: icon.present ? icon.value : this.icon,
+        description: description.present ? description.value : this.description,
         startDate: startDate.present ? startDate.value : this.startDate,
         endDate: endDate.present ? endDate.value : this.endDate,
         pinned: pinned ?? this.pinned,
@@ -1022,6 +1092,8 @@ class Plan extends DataClass implements Insertable<Plan> {
       id: data.id.present ? data.id.value : this.id,
       name: data.name.present ? data.name.value : this.name,
       icon: data.icon.present ? data.icon.value : this.icon,
+      description:
+          data.description.present ? data.description.value : this.description,
       startDate: data.startDate.present ? data.startDate.value : this.startDate,
       endDate: data.endDate.present ? data.endDate.value : this.endDate,
       pinned: data.pinned.present ? data.pinned.value : this.pinned,
@@ -1038,6 +1110,7 @@ class Plan extends DataClass implements Insertable<Plan> {
           ..write('id: $id, ')
           ..write('name: $name, ')
           ..write('icon: $icon, ')
+          ..write('description: $description, ')
           ..write('startDate: $startDate, ')
           ..write('endDate: $endDate, ')
           ..write('pinned: $pinned, ')
@@ -1050,8 +1123,8 @@ class Plan extends DataClass implements Insertable<Plan> {
   }
 
   @override
-  int get hashCode => Object.hash(id, name, icon, startDate, endDate, pinned,
-      archived, orderKey, createdAt, updatedAt);
+  int get hashCode => Object.hash(id, name, icon, description, startDate,
+      endDate, pinned, archived, orderKey, createdAt, updatedAt);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -1059,6 +1132,7 @@ class Plan extends DataClass implements Insertable<Plan> {
           other.id == this.id &&
           other.name == this.name &&
           other.icon == this.icon &&
+          other.description == this.description &&
           other.startDate == this.startDate &&
           other.endDate == this.endDate &&
           other.pinned == this.pinned &&
@@ -1072,6 +1146,7 @@ class PlansCompanion extends UpdateCompanion<Plan> {
   final Value<String> id;
   final Value<String> name;
   final Value<String?> icon;
+  final Value<String?> description;
   final Value<DateTime?> startDate;
   final Value<DateTime?> endDate;
   final Value<bool> pinned;
@@ -1084,6 +1159,7 @@ class PlansCompanion extends UpdateCompanion<Plan> {
     this.id = const Value.absent(),
     this.name = const Value.absent(),
     this.icon = const Value.absent(),
+    this.description = const Value.absent(),
     this.startDate = const Value.absent(),
     this.endDate = const Value.absent(),
     this.pinned = const Value.absent(),
@@ -1097,6 +1173,7 @@ class PlansCompanion extends UpdateCompanion<Plan> {
     required String id,
     required String name,
     this.icon = const Value.absent(),
+    this.description = const Value.absent(),
     this.startDate = const Value.absent(),
     this.endDate = const Value.absent(),
     this.pinned = const Value.absent(),
@@ -1113,6 +1190,7 @@ class PlansCompanion extends UpdateCompanion<Plan> {
     Expression<String>? id,
     Expression<String>? name,
     Expression<String>? icon,
+    Expression<String>? description,
     Expression<DateTime>? startDate,
     Expression<DateTime>? endDate,
     Expression<bool>? pinned,
@@ -1126,6 +1204,7 @@ class PlansCompanion extends UpdateCompanion<Plan> {
       if (id != null) 'id': id,
       if (name != null) 'name': name,
       if (icon != null) 'icon': icon,
+      if (description != null) 'description': description,
       if (startDate != null) 'start_date': startDate,
       if (endDate != null) 'end_date': endDate,
       if (pinned != null) 'pinned': pinned,
@@ -1141,6 +1220,7 @@ class PlansCompanion extends UpdateCompanion<Plan> {
       {Value<String>? id,
       Value<String>? name,
       Value<String?>? icon,
+      Value<String?>? description,
       Value<DateTime?>? startDate,
       Value<DateTime?>? endDate,
       Value<bool>? pinned,
@@ -1153,6 +1233,7 @@ class PlansCompanion extends UpdateCompanion<Plan> {
       id: id ?? this.id,
       name: name ?? this.name,
       icon: icon ?? this.icon,
+      description: description ?? this.description,
       startDate: startDate ?? this.startDate,
       endDate: endDate ?? this.endDate,
       pinned: pinned ?? this.pinned,
@@ -1175,6 +1256,9 @@ class PlansCompanion extends UpdateCompanion<Plan> {
     }
     if (icon.present) {
       map['icon'] = Variable<String>(icon.value);
+    }
+    if (description.present) {
+      map['description'] = Variable<String>(description.value);
     }
     if (startDate.present) {
       map['start_date'] = Variable<DateTime>(startDate.value);
@@ -1209,6 +1293,7 @@ class PlansCompanion extends UpdateCompanion<Plan> {
           ..write('id: $id, ')
           ..write('name: $name, ')
           ..write('icon: $icon, ')
+          ..write('description: $description, ')
           ..write('startDate: $startDate, ')
           ..write('endDate: $endDate, ')
           ..write('pinned: $pinned, ')
@@ -1978,6 +2063,7 @@ typedef $$TasksTableCreateCompanionBuilder = TasksCompanion Function({
   Value<double> orderKey,
   required DateTime createdAt,
   required DateTime updatedAt,
+  Value<DateTime?> completedAt,
   Value<int> rowid,
 });
 typedef $$TasksTableUpdateCompanionBuilder = TasksCompanion Function({
@@ -1996,6 +2082,7 @@ typedef $$TasksTableUpdateCompanionBuilder = TasksCompanion Function({
   Value<double> orderKey,
   Value<DateTime> createdAt,
   Value<DateTime> updatedAt,
+  Value<DateTime?> completedAt,
   Value<int> rowid,
 });
 
@@ -2031,6 +2118,7 @@ class $$TasksTableTableManager extends RootTableManager<
             Value<double> orderKey = const Value.absent(),
             Value<DateTime> createdAt = const Value.absent(),
             Value<DateTime> updatedAt = const Value.absent(),
+            Value<DateTime?> completedAt = const Value.absent(),
             Value<int> rowid = const Value.absent(),
           }) =>
               TasksCompanion(
@@ -2049,6 +2137,7 @@ class $$TasksTableTableManager extends RootTableManager<
             orderKey: orderKey,
             createdAt: createdAt,
             updatedAt: updatedAt,
+            completedAt: completedAt,
             rowid: rowid,
           ),
           createCompanionCallback: ({
@@ -2067,6 +2156,7 @@ class $$TasksTableTableManager extends RootTableManager<
             Value<double> orderKey = const Value.absent(),
             required DateTime createdAt,
             required DateTime updatedAt,
+            Value<DateTime?> completedAt = const Value.absent(),
             Value<int> rowid = const Value.absent(),
           }) =>
               TasksCompanion.insert(
@@ -2085,6 +2175,7 @@ class $$TasksTableTableManager extends RootTableManager<
             orderKey: orderKey,
             createdAt: createdAt,
             updatedAt: updatedAt,
+            completedAt: completedAt,
             rowid: rowid,
           ),
         ));
@@ -2171,6 +2262,11 @@ class $$TasksTableFilterComposer
       column: $state.table.updatedAt,
       builder: (column, joinBuilders) =>
           ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<DateTime> get completedAt => $state.composableBuilder(
+      column: $state.table.completedAt,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
 }
 
 class $$TasksTableOrderingComposer
@@ -2250,12 +2346,18 @@ class $$TasksTableOrderingComposer
       column: $state.table.updatedAt,
       builder: (column, joinBuilders) =>
           ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<DateTime> get completedAt => $state.composableBuilder(
+      column: $state.table.completedAt,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
 }
 
 typedef $$PlansTableCreateCompanionBuilder = PlansCompanion Function({
   required String id,
   required String name,
   Value<String?> icon,
+  Value<String?> description,
   Value<DateTime?> startDate,
   Value<DateTime?> endDate,
   Value<bool> pinned,
@@ -2269,6 +2371,7 @@ typedef $$PlansTableUpdateCompanionBuilder = PlansCompanion Function({
   Value<String> id,
   Value<String> name,
   Value<String?> icon,
+  Value<String?> description,
   Value<DateTime?> startDate,
   Value<DateTime?> endDate,
   Value<bool> pinned,
@@ -2299,6 +2402,7 @@ class $$PlansTableTableManager extends RootTableManager<
             Value<String> id = const Value.absent(),
             Value<String> name = const Value.absent(),
             Value<String?> icon = const Value.absent(),
+            Value<String?> description = const Value.absent(),
             Value<DateTime?> startDate = const Value.absent(),
             Value<DateTime?> endDate = const Value.absent(),
             Value<bool> pinned = const Value.absent(),
@@ -2312,6 +2416,7 @@ class $$PlansTableTableManager extends RootTableManager<
             id: id,
             name: name,
             icon: icon,
+            description: description,
             startDate: startDate,
             endDate: endDate,
             pinned: pinned,
@@ -2325,6 +2430,7 @@ class $$PlansTableTableManager extends RootTableManager<
             required String id,
             required String name,
             Value<String?> icon = const Value.absent(),
+            Value<String?> description = const Value.absent(),
             Value<DateTime?> startDate = const Value.absent(),
             Value<DateTime?> endDate = const Value.absent(),
             Value<bool> pinned = const Value.absent(),
@@ -2338,6 +2444,7 @@ class $$PlansTableTableManager extends RootTableManager<
             id: id,
             name: name,
             icon: icon,
+            description: description,
             startDate: startDate,
             endDate: endDate,
             pinned: pinned,
@@ -2365,6 +2472,11 @@ class $$PlansTableFilterComposer
 
   ColumnFilters<String> get icon => $state.composableBuilder(
       column: $state.table.icon,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
+  ColumnFilters<String> get description => $state.composableBuilder(
+      column: $state.table.description,
       builder: (column, joinBuilders) =>
           ColumnFilters(column, joinBuilders: joinBuilders));
 
@@ -2419,6 +2531,11 @@ class $$PlansTableOrderingComposer
 
   ColumnOrderings<String> get icon => $state.composableBuilder(
       column: $state.table.icon,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<String> get description => $state.composableBuilder(
+      column: $state.table.description,
       builder: (column, joinBuilders) =>
           ColumnOrderings(column, joinBuilders: joinBuilders));
 

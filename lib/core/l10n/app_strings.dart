@@ -12,7 +12,7 @@ class AppStrings {
 
   // ── نوار پایین ────────────────────────────────────────────────────────────
   String get navToday    => _fa ? 'امروز'     : 'Today';
-  String get navInbox    => _fa ? 'صندوق'    : 'Inbox';
+  String get navInbox    => _fa ? 'آمار'      : 'Stats';
   String get navPlans    => _fa ? 'برنامه‌ها' : 'Plans';
   String get navCalendar => _fa ? 'تقویم'    : 'Calendar';
   String get navSettings => _fa ? 'تنظیمات'  : 'Settings';

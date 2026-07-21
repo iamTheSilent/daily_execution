@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:drift/drift.dart' show Value;
@@ -8,6 +9,7 @@ import '../data/database/database.dart';
 import '../data/database/tables.dart';
 import '../data/repositories/task_repository.dart';
 import '../domain/task_logic.dart';
+import '../services/sync_service.dart';
 
 // ── زبان و متن‌ها ──
 // زبانِ انتخاب‌شده در SharedPreferences ذخیره می‌شود تا با ری‌استارت نپرد.
@@ -253,3 +255,34 @@ final planTasksProvider =
 // ── بج ──
 final planBadgeProvider = StreamProvider.autoDispose<int>(
     (ref) => ref.watch(planRepositoryProvider).watchDueBadge());
+
+// ── Stats ──
+final todayTasksProvider = StreamProvider.autoDispose<List<Task>>((ref) {
+  final db = ref.watch(databaseProvider);
+  final now = DateTime.now();
+  return db.watchDayTasks(DateTime(now.year, now.month, now.day));
+});
+
+final completionDatesProvider =
+    StreamProvider.autoDispose<List<DateTime>>((ref) {
+  final db = ref.watch(databaseProvider);
+  final now = DateTime.now();
+  // Look back ~26 weeks to cover the heatmap window.
+  final from = DateTime(now.year, now.month, now.day)
+      .subtract(const Duration(days: 26 * 7));
+  return db.watchCompletionDates(from);
+});
+
+// ── Sync (keeps the reminder server updated so Telegram reminders fire) ──
+final syncServiceProvider =
+    Provider<SyncService>((ref) => SyncService(ref.watch(databaseProvider)));
+
+// Pushes local data to the reminder server on start and every 60s.
+// Kept alive by being watched from the main scaffold.
+final autoSyncProvider = Provider<void>((ref) {
+  final sync = ref.watch(syncServiceProvider);
+  sync.syncNow();
+  final timer =
+      Timer.periodic(const Duration(seconds: 60), (_) => sync.syncNow());
+  ref.onDispose(timer.cancel);
+});

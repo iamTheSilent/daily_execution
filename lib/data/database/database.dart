@@ -88,6 +88,16 @@ class AppDatabase extends _$AppDatabase {
   Future<Task> getTaskById(String id) =>
       (select(tasks)..where((t) => t.id.equals(id))).getSingle();
 
+  // Completion timestamps from a given date onward (for streak + heatmap).
+  Stream<List<DateTime>> watchCompletionDates(DateTime from) =>
+      (select(tasks)
+            ..where((t) =>
+                t.completedAt.isNotNull() &
+                t.completedAt.isBiggerOrEqualValue(from)))
+          .watch()
+          .map((rows) =>
+              rows.map((t) => t.completedAt).whereType<DateTime>().toList());
+
   Stream<int> watchPlanBadgeCount() {
     final endOfToday =
         DateTime.now().copyWith(hour: 23, minute: 59, second: 59);

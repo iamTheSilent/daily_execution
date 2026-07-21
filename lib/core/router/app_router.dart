@@ -48,6 +48,8 @@ class _MainScaffold extends ConsumerWidget {
     final badge = ref.watch(planBadgeProvider).valueOrNull ?? 0;
     final s = ref.watch(appStringsProvider);
     final current = shell.currentIndex;
+    // Keep the reminder server in sync while the app is open.
+    ref.watch(autoSyncProvider);
 
     return Scaffold(
       body: shell,
@@ -84,7 +86,7 @@ class _BottomBar extends StatelessWidget {
     Icons.menu_book_outlined,      // Plans
     Icons.calendar_today_outlined, // Calendar
     Icons.menu,                    // Today (مرکز)
-    Icons.inbox_outlined,          // Inbox
+    Icons.insights_outlined,       // Stats
     Icons.settings_outlined,       // Settings
   ];
 
